@@ -1,4 +1,5 @@
 // models/user.js
+const bcrypt = require('bcrypt');
 // 데이터베이스에 직접 접근하여 데이터 조회, 변경
 const mysql = require('../config/mysql');
 
@@ -44,26 +45,25 @@ User.findByEmail = function (email, result) {
     'select * from users where email = ? ',
     email,
     function (err, res) {
-      if (err) {
-        console.log('error: ', err);
-        result(err, null);
-      } else {
-        console.log('user: ', res);
-        result(null, res);
-      }
+      if (err) return result(err);
+      result(null, res);
     },
   );
+};
+// 비밀번호 일치 여부 검사
+User.comparePassword = function (plainPassword, passwordInDb, result) {
+  // plainPassword 를 암호화해서 데이터베이스에 있는 암호화된 비밀번호와 같은지 체크
+  bcrypt.compare(plainPassword, passwordInDb, function (err, isMatch) {
+    // bcrypt compare 함수 동작 중 오류 발생
+    if (err) return result(err);
+    result(null, isMatch);
+  });
 };
 // 사용자 인덱스 값으로 검색
 User.findById = function (id, result) {
   mysql.query('select * from users where id = ? ', id, function (err, res) {
-    if (err) {
-      console.log('error: ', err);
-      result(err, null);
-    } else {
-      console.log('user: ', res);
-      result(null, res);
-    }
+    if (err) return result(err);
+    result(null, res);
   });
 };
 // 사용자 등록
@@ -84,13 +84,8 @@ User.delete = function (email, result) {
     'delete from users where email = ?',
     [email],
     function (err, res) {
-      if (err) {
-        console.log('error: ', err);
-        result(err, null);
-      } else {
-        console.log('user: ', res);
-        result(null, res.insertId);
-      }
+      if (err) return result(err, null);
+      result(null, res.insertId);
     },
   );
 };
@@ -107,13 +102,8 @@ User.update = function (email, user, result) {
       CURRENT_TIMESTAMP,
     ],
     function (err, res) {
-      if (err) {
-        console.log('error: ', err);
-        result(err, null);
-      } else {
-        console.log('user: ', res);
-        result(null, res);
-      }
+      if (err) return result(err, null);
+      result(null, res);
     },
   );
 };
