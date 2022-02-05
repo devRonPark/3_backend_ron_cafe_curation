@@ -78,6 +78,23 @@ exports.sendLoginPage = function (req, res) {
 
   res.send(output);
 };
+exports.findEmail = function (req, res, next) {
+  User.getEmailByPhoneNumber(req.body.phone_number, function (err, user) {
+    if (err) return next(err);
+
+    const userInfo = JSON.parse(JSON.stringify(user[0]));
+
+    // user 가 존재하지 않으면
+    if (!userInfo) {
+      return res.status(404).json({
+        success: false,
+        message: '제공된 휴대폰 번호에 해당하는 사용자가 없습니다.',
+      });
+    }
+
+    res.status(200).json({ data: userInfo });
+  });
+};
 
 // min ~ max 까지 랜덤으로 숫자 생성
 const generateRandom = function (min, max) {

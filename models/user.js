@@ -66,6 +66,17 @@ User.findById = function (id, result) {
     result(null, res);
   });
 };
+// 사용자 휴대폰 번호로 검색
+User.getEmailByPhoneNumber = function (phone_number, result) {
+  mysql.query(
+    'select email from users where phone_number = ? ',
+    phone_number,
+    function (err, res) {
+      if (err) return result(err);
+      result(null, res);
+    },
+  );
+};
 // 사용자 등록
 User.create = function (newUser, result) {
   mysql.query('insert into users set ?', newUser, function (err, res) {

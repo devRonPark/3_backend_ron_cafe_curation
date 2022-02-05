@@ -14,6 +14,9 @@ const {
   isAuthenticated,
   isNotAuthenticated,
 } = require('../middlewares/middlewares');
+const {
+  validatePhoneNumberCheck,
+} = require('../middlewares/findEmailValidate');
 
 // 사용자 정보 조회
 userRouter.get('/', UserController.findAll);
@@ -54,8 +57,12 @@ userRouter.get('/logout', (req, res, next) => {
 // 2. req.body.phone_number 가 공란이면 에러 메세지, 형식을 지키지 않아도 에러 메세지
 // 3. 유효성 검사 통과 후 휴대폰 번호 기준으로 데이터베이스 조회
 // 4. 사용자 이메일 주소 암호화해 전송
+userRouter.post(
+  '/find_email',
+  [validatePhoneNumberCheck, validateCallback],
+  UserController.findEmail,
+);
 
-userRouter.post('/find_email', (req, res) => {});
 // 회원가입 시 이메일 인증
 userRouter.post('/auth/email', UserController.authEmail);
 
