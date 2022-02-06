@@ -101,44 +101,62 @@ const generateRandom = function (min, max) {
   const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
   return randomNumber;
 };
-
+// 이메일 인증을 위한 6자리 인증번호를 포함한 메일 발송
 exports.authEmail = async function (req, res) {
-  // 입력 받아온 이메일 주소로 6자리 인증번호 발송
-  const { email } = req.body;
-  // 이메일 인증을 위해 랜덤한 6자리 인증번호 생성
-  const verificationNumber = generateRandom(111111, 999999);
+  try {
+    // 회원가입 시 사용자가 입력한 이메일 주소
+    const { email } = req.body;
+    // 이메일 인증을 위해 랜덤한 6자리 인증번호 생성
+    const authenticationNumber = generateRandom(111111, 999999);
 
-  // 이메일 서버 옵션
-  const smtpOption = {
-    host: 'smtp.mailtrap.io',
-    port: 2525,
-    secure: false,
-    auth: {
-      user: '66028f91230169',
-      pass: '34bafb33d8225a',
-    },
-  };
+    // SMTP 옵션
+    const smtpOption = {
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.ACCOUNT_USER,
+        pass: process.env.ACCOUNT_PASS,
+      },
+      from: process.env.ACCOUNT_USER,
+      // 환경변수로 메일 주소와 비밀번호 설정
+    };
+    // SMTP 객체 생성
+    const smtpTransporter = nodemailer.createTransport(smtpOption);
 
-  const smtpTransport = nodemailer.createTransport(smtpOption);
+    // SMTP 연결 설정 검증
+    smtpTransporter.verify(function (error, success) {
+      if (error) console.log(error);
+      else {
+        console.log('Service is ready to take our messages.');
+      }
+    });
 
-  // 유효한 이메일 주소인지 확인하기 위해 이메일 인증 메일 발송
-  const emailInfo = {
-    from: 'admin@zzincafe.com',
-    to: email,
-    subject: '이메일 인증 안내',
-    text:
-      '이 메일은 이메일이 유효한 지 확인하기 위한 인증 메일입니다. 아래 6자리 숫자를 기억해뒀다 회원가입 시 입력해주세요 : ' +
-      verificationNumber,
-  };
+    // 송신자에게 보낼 메시지 작성
+    const message = {
+      from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+      to: email, // 수신자 이메일 주소
+      subject: '☕ ZZINCAFE 회원가입 인증메일',
+      text: 'ZZINCAFE 회원가입 인증메일 입니다.', // plain text body
+      html: `
+        <p>ZZINCAFE 회원가입을 위한 인증 번호입니다.</p>
+        <p>아래의 인증 번호를 입력하여 인증을 완료해주세요.</p>
+        <h2>${authenticationNumber}</h2>
+      `,
+    };
 
-  const result = await smtpTransport.sendMail(emailInfo, (error, info) => {
-    if (error) {
-      console.log(error);
-      return res.status(400);
-    } else {
-      console.log(info.response);
-      return res.status(200).send({ verificationNumber });
-    }
-  });
-  smtpTransport.close();
+    const result = await smtpTransporter.sendMail(message, (error, info) => {
+      if (error) {
+        console.log(error);
+        return res.status(400);
+      } else {
+        console.log(info.response);
+        return res.status(200).send({ success: true, authenticationNumber });
+      }
+    });
+    smtpTransporter.close();
+  } catch (err) {
+    res.send(err);
+  }
 };

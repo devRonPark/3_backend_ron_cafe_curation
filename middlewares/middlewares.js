@@ -57,6 +57,7 @@ exports.loadUserData = function () {
     }
   };
 };
+// req 객체에 logout 메소드 추가
 exports.addLogout = function () {
   return function (req, res, next) {
     req.logout = function () {
@@ -65,4 +66,18 @@ exports.addLogout = function () {
 
     next();
   };
+};
+// 8글자의 패스워드 랜덤 생성
+exports.generateRandomPassword = () => {
+  const chars =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz!@#$%^&*';
+  const stringLength = 8;
+
+  var randomString = '';
+  for (let i = 0; i < stringLength; i++) {
+    let randomNum = Math.floor(Math.random() * chars.length);
+    randomString += chars.substring(randomNum, randomNum + 1);
+  }
+
+  return randomString;
 };

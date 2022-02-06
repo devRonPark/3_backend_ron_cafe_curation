@@ -58,10 +58,19 @@ userRouter.get('/logout', (req, res, next) => {
 // 3. 유효성 검사 통과 후 휴대폰 번호 기준으로 데이터베이스 조회
 // 4. 사용자 이메일 주소 암호화해 전송
 userRouter.post(
-  '/find_email',
+  '/find/email',
   [validatePhoneNumberCheck, validateCallback],
   UserController.findEmail,
 );
+// 사용자 비밀번호 찾기
+userRouter.post('/find/password', (req, res) => {
+  // 1. req.body.phone_number, req.body.email 유효성 검사
+  // 2. 유효성 검사 통과 후 휴대폰 번호, 이메일 주소로 데이터베이스 조회
+  // 3. 사용자 정보 존재하면, 임시 비밀번호 생성
+  // 4. 생성한 임시 비밀번호 암호화해서 데이터베이스에 저장
+  // 5. 임시 비밀번호 사용자 이메일 주소로 발송
+  console.log('사용자 비밀번호 찾기');
+});
 
 // 회원가입 시 이메일 인증
 userRouter.post('/auth/email', UserController.authEmail);
