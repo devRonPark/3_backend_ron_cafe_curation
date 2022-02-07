@@ -1,11 +1,16 @@
 const express = require('express');
 
 const userRouter = express.Router();
-const userRegisterValidate = require('../middlewares/userRegisterValidate');
 const UserController = require('../controllers/user.controller');
-const { validateCallback } = require('../middlewares/validateCallback');
+const {
+  validateUsername,
+  validateEmail,
+  validatePassword,
+  validatePasswordConfirmation,
+  validatePhoneNumber,
+  validateCallback,
+} = require('../middlewares/validate');
 const { passwordEncryption } = require('../middlewares/passwordEncryption');
-const userLoginValidate = require('../middlewares/userLoginValidate');
 const { upload, uploadCallback } = require('../middlewares/userProfileUpload');
 const {
   checkEmailAlreadyExists,
@@ -14,9 +19,6 @@ const {
   isAuthenticated,
   isNotAuthenticated,
 } = require('../middlewares/middlewares');
-const {
-  validatePhoneNumberCheck,
-} = require('../middlewares/findEmailValidate');
 
 // 사용자 정보 조회
 userRouter.get('/', UserController.findAll);
@@ -32,8 +34,14 @@ userRouter.get('/login', isNotAuthenticated, (req, res) => {
 userRouter.post(
   '/register',
   [upload.single('profile'), uploadCallback], // 이미지 파일 서버 폴더 업로드 및 파일 경로 req 객체에 추가
-  // decryptUserPrivateInfo,
-  [userRegisterValidate, validateCallback], // 입력 값 유효성 검사
+  [
+    validateUsername,
+    validateEmail,
+    validatePassword,
+    validatePasswordConfirmation,
+    validatePhoneNumber,
+    validateCallback,
+  ], // 입력 값 유효성 검사
   checkEmailAlreadyExists,
   passwordEncryption, // 비밀번호 암호화
   UserController.create,
@@ -41,7 +49,7 @@ userRouter.post(
 // 사용자 로그인
 userRouter.post(
   '/login',
-  [userLoginValidate, validateCallback], // 입력 값 유효성 검사
+  [validateEmail, validatePassword, validateCallback], // 입력 값 유효성 검사
   UserController.authenticate,
   (req, res) => res.status(200).json({ success: true }),
 );
@@ -59,18 +67,20 @@ userRouter.get('/logout', (req, res, next) => {
 // 4. 사용자 이메일 주소 암호화해 전송
 userRouter.post(
   '/find/email',
-  [validatePhoneNumberCheck, validateCallback],
+  [validatePhoneNumber, validateCallback],
   UserController.findEmail,
 );
 // 사용자 비밀번호 찾기
-userRouter.post('/find/password', (req, res) => {
-  // 1. req.body.phone_number, req.body.email 유효성 검사
-  // 2. 유효성 검사 통과 후 휴대폰 번호, 이메일 주소로 데이터베이스 조회
-  // 3. 사용자 정보 존재하면, 임시 비밀번호 생성
-  // 4. 생성한 임시 비밀번호 암호화해서 데이터베이스에 저장
-  // 5. 임시 비밀번호 사용자 이메일 주소로 발송
-  console.log('사용자 비밀번호 찾기');
-});
+// ✔ 1. req.body.phone_number, req.body.email 유효성 검사
+// ✔ 2. 유효성 검사 통과 후 휴대폰 번호, 이메일 주소로 데이터베이스 조회
+// ✔ 3. 사용자 정보 존재하면, 임시 비밀번호 생성
+// 4. 생성한 임시 비밀번호 암호화해서 데이터베이스에 저장
+// 5. 임시 비밀번호 사용자 이메일 주소로 발송
+userRouter.post(
+  '/find/password',
+  [validatePhoneNumber, validateEmail, validateCallback],
+  UserController.findPassword,
+);
 
 // 회원가입 시 이메일 인증
 userRouter.post('/auth/email', UserController.authEmail);

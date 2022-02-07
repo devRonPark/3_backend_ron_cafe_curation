@@ -1,5 +1,10 @@
 const User = require('../models/user');
-const nodemailer = require('nodemailer');
+const { generateRandomPassword } = require('../middlewares/middlewares');
+const {
+  encryptTemporaryPassword,
+} = require('../middlewares/passwordEncryption');
+const smtpTransporter = require('../config/smtpTransporter');
+const { resolveConfig } = require('prettier');
 
 // 사용자 정보 조회
 exports.findAll = function (req, res) {
@@ -95,6 +100,9 @@ exports.findEmail = function (req, res, next) {
     res.status(200).json({ data: userInfo });
   });
 };
+exports.findPassword = (req, res) => {
+  User.getPassword;
+};
 
 // min ~ max 까지 랜덤으로 숫자 생성
 const generateRandom = function (min, max) {
@@ -108,22 +116,6 @@ exports.authEmail = async function (req, res) {
     const { email } = req.body;
     // 이메일 인증을 위해 랜덤한 6자리 인증번호 생성
     const authenticationNumber = generateRandom(111111, 999999);
-
-    // SMTP 옵션
-    const smtpOption = {
-      service: 'gmail',
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.ACCOUNT_USER,
-        pass: process.env.ACCOUNT_PASS,
-      },
-      from: process.env.ACCOUNT_USER,
-      // 환경변수로 메일 주소와 비밀번호 설정
-    };
-    // SMTP 객체 생성
-    const smtpTransporter = nodemailer.createTransport(smtpOption);
 
     // SMTP 연결 설정 검증
     smtpTransporter.verify(function (error, success) {
@@ -159,4 +151,82 @@ exports.authEmail = async function (req, res) {
   } catch (err) {
     res.send(err);
   }
+};
+const sendEmailForNewPassword = (email, newPassword) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // SMTP 연결 설정 검증
+      smtpTransporter.verify(function (error, success) {
+        if (error) reject(error);
+        else {
+          console.log('Service is ready to take our messages.');
+        }
+      });
+
+      // 송신자에게 보낼 메시지 작성
+      const message = {
+        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        to: email, // 수신자 이메일 주소
+        subject: '☕ ZZINCAFE 로그인 임시 패스워드 발급',
+        html: `
+          <p>ZZINCAFE 로그인을 위한 임시 패스워드입니다.</p>
+          <h2>${newPassword}</h2>
+          <p>반드시 로그인하신 이후 비밀번호를 변경해주시기 바랍니다.</p>
+        `,
+      };
+      smtpTransporter
+        .sendMail(message)
+        .then(response => {
+          console.log('.then handler is called');
+          resolve(true);
+        })
+        .catch(console.log);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+// 비밀번호 찾기 라우터 로직
+exports.findPassword = function (req, res) {
+  let isMailSent = false;
+  const userInfo = {
+    phone_number: req.body.phone_number,
+    email: req.body.email,
+  };
+  User.getUserIdByPhoneNumberAndEmail(userInfo, function (err, user) {
+    if (err) return res.send(err);
+    const userInfo = JSON.parse(JSON.stringify(user[0]));
+
+    // 데이터베이스 조회 결과 사용자가 존재하지 않는다면
+    if (!userInfo) {
+      return res.status(404).json({
+        success: false,
+        message: '제공된 휴대폰 번호 및 이메일에 해당하는 사용자가 없습니다.',
+      });
+    }
+    console.log('사용자 정보 존재함.');
+
+    // 8자리의 임시 비밀번호 생성
+    const temporaryPassword = generateRandomPassword();
+    // 비밀번호 암호화
+    const hashedTemporaryPassword = encryptTemporaryPassword(temporaryPassword);
+    console.log('hashedTemporaryPassword: ', hashedTemporaryPassword);
+    // 데이터베이스로 전달할 사용자 객체의 비밀번호 값로 생성된 임시 비밀번호 저장
+    userInfo.password = hashedTemporaryPassword;
+    // 데이터베이스에 임시 비밀번호 저장
+    User.updatePassword(userInfo, function (err, success) {
+      if (err) return res.send(err);
+      // 데이터베이스에 임시 비밀번호 저장 성공 시
+      if (success) {
+        // 임시 비밀번호가 포함된 이메일 발송
+        sendEmailForNewPassword('jspark9236@naver.com', temporaryPassword)
+          .then(result => {
+            res.status(200).json({ message: 'The Mail is Sent.' });
+          })
+          .catch(err => {
+            res.status(500).send(err);
+          });
+      }
+    });
+  });
 };

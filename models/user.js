@@ -66,11 +66,24 @@ User.findById = function (id, result) {
     result(null, res);
   });
 };
-// 사용자 휴대폰 번호로 검색
+// 사용자 휴대폰 번호로 데이터베이스 조회
+// @returns emailValue in the database
 User.getEmailByPhoneNumber = function (phone_number, result) {
   mysql.query(
     'select email from users where phone_number = ? ',
     phone_number,
+    function (err, res) {
+      if (err) return result(err);
+      result(null, res);
+    },
+  );
+};
+// 사용자 휴대폰 번호와 이메일 주소로 데이터베이스 조회
+// @returns true: 유저 존재함, false: 유저 존재하지 않음.
+User.getUserIdByPhoneNumberAndEmail = function (userInfo, result) {
+  mysql.query(
+    'select id from users where phone_number = ? and email = ?',
+    [userInfo.phone_number, userInfo.email],
     function (err, res) {
       if (err) return result(err);
       result(null, res);
@@ -97,6 +110,18 @@ User.delete = function (email, result) {
     function (err, res) {
       if (err) return result(err, null);
       result(null, res.insertId);
+    },
+  );
+};
+// 사용자 비밀번호 정보 수정
+User.updatePassword = function (user, result) {
+  console.log('user: ', user);
+  mysql.query(
+    'update users set password = ? where id = ?',
+    [user.password, user.id],
+    function (err, res) {
+      if (err) return result(err, null);
+      result(null, res);
     },
   );
 };
