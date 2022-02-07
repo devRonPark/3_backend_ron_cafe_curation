@@ -2,6 +2,7 @@
 const bcrypt = require('bcrypt');
 // 데이터베이스에 직접 접근하여 데이터 조회, 변경
 const mysql = require('../config/mysql');
+const { printSqlLog } = require('./util');
 
 // 사용자 객체 생성자 함수
 let User = function (user) {
@@ -16,7 +17,7 @@ let User = function (user) {
 
 // 모든 사용자 검색
 User.findAll = function (result) {
-  mysql.query('select * from users', function (err, res) {
+  const executedSql = mysql.query('select * from users', function (err, res) {
     if (err) {
       console.log('error: ', err);
       result(err, null);
@@ -25,23 +26,31 @@ User.findAll = function (result) {
       result(null, res);
     }
   });
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 조건에 따라 특정 사용자 검색
 // 이름으로 검색
 User.findByName = function (name, result) {
-  mysql.query('select * from users where name = ? ', name, function (err, res) {
-    if (err) {
-      console.log('error: ', err);
-      result(err, null);
-    } else {
-      console.log('user: ', res);
-      result(null, res);
-    }
-  });
+  const executedSql = mysql.query(
+    'select * from users where name = ? ',
+    name,
+    function (err, res) {
+      if (err) {
+        console.log('error: ', err);
+        result(err, null);
+      } else {
+        console.log('user: ', res);
+        result(null, res);
+      }
+    },
+  );
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 이메일로 검색
 User.findByEmail = function (email, result) {
-  mysql.query(
+  const executedSql = mysql.query(
     'select * from users where email = ? ',
     email,
     function (err, res) {
@@ -49,6 +58,8 @@ User.findByEmail = function (email, result) {
       result(null, res);
     },
   );
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 비밀번호 일치 여부 검사
 User.comparePassword = function (plainPassword, passwordInDb, result) {
@@ -61,15 +72,22 @@ User.comparePassword = function (plainPassword, passwordInDb, result) {
 };
 // 사용자 인덱스 값으로 검색
 User.findById = function (id, result) {
-  mysql.query('select * from users where id = ? ', id, function (err, res) {
-    if (err) return result(err);
-    result(null, res);
-  });
+  const executedSql = mysql.query(
+    'select * from users where id = ? ',
+    id,
+    function (err, res) {
+      if (err) return result(err);
+      result(null, res);
+    },
+  );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 휴대폰 번호로 데이터베이스 조회
 // @returns emailValue in the database
 User.getEmailByPhoneNumber = function (phone_number, result) {
-  mysql.query(
+  const executedSql = mysql.query(
     'select email from users where phone_number = ? ',
     phone_number,
     function (err, res) {
@@ -77,11 +95,14 @@ User.getEmailByPhoneNumber = function (phone_number, result) {
       result(null, res);
     },
   );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 휴대폰 번호와 이메일 주소로 데이터베이스 조회
 // @returns true: 유저 존재함, false: 유저 존재하지 않음.
 User.getUserIdByPhoneNumberAndEmail = function (userInfo, result) {
-  mysql.query(
+  const executedSql = mysql.query(
     'select id from users where phone_number = ? and email = ?',
     [userInfo.phone_number, userInfo.email],
     function (err, res) {
@@ -89,22 +110,32 @@ User.getUserIdByPhoneNumberAndEmail = function (userInfo, result) {
       result(null, res);
     },
   );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 등록
 User.create = function (newUser, result) {
-  mysql.query('insert into users set ?', newUser, function (err, res) {
-    if (err) {
-      console.log('error: ', err);
-      result(err, null);
-    } else {
-      console.log('user: ', res);
-      result(null, res.insertId);
-    }
-  });
+  const executedSql = mysql.query(
+    'insert into users set ?',
+    newUser,
+    function (err, res) {
+      if (err) {
+        console.log('error: ', err);
+        result(err, null);
+      } else {
+        console.log('user: ', res);
+        result(null, res.insertId);
+      }
+    },
+  );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 삭제
 User.delete = function (email, result) {
-  mysql.query(
+  const executedSql = mysql.query(
     'delete from users where email = ?',
     [email],
     function (err, res) {
@@ -112,11 +143,14 @@ User.delete = function (email, result) {
       result(null, res.insertId);
     },
   );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 비밀번호 정보 수정
 User.updatePassword = function (user, result) {
   console.log('user: ', user);
-  mysql.query(
+  const executedSql = mysql.query(
     'update users set password = ? where id = ?',
     [user.password, user.id],
     function (err, res) {
@@ -124,10 +158,13 @@ User.updatePassword = function (user, result) {
       result(null, res);
     },
   );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 // 사용자 정보 수정
 User.update = function (email, user, result) {
-  mysql.query(
+  const executedSql = mysql.query(
     'update users set name=?,email=?,password=?,phone_number=?,profile_image_path=?,modified_at=?',
     [
       user.name,
@@ -142,6 +179,9 @@ User.update = function (email, user, result) {
       result(null, res);
     },
   );
+
+  // 콘솔 창에 sql 문 출력
+  printSqlLog(executedSql.sql);
 };
 
 module.exports = User;
