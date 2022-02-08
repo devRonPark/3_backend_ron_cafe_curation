@@ -4,7 +4,6 @@ const {
   encryptTemporaryPassword,
 } = require('../middlewares/passwordEncryption');
 const smtpTransporter = require('../config/smtpTransporter');
-const { resolveConfig } = require('prettier');
 
 // 사용자 정보 조회
 exports.findAll = function (req, res) {
@@ -41,28 +40,28 @@ exports.authenticate = function (req, res, next) {
         success: false,
         message: '제공된 이메일에 해당하는 사용자가 없습니다.',
       });
+    } else {
+      // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 맞는 비밀번호인지 확인.
+      User.comparePassword(
+        req.body.password,
+        userInfo.password,
+        (err, isMatch) => {
+          // bcrypt compare 함수 동작 중 오류 발생
+          if (err) return res.status(401).json(err);
+          // 비밀번호가 일치하지 않는다면,
+          if (!isMatch) {
+            return res.status(401).json({
+              success: false,
+              message: '비밀번호가 틀렸습니다.',
+            });
+          }
+          // 사용자를 찾으면 세션에 userId 저장.
+          req.session.userid = userInfo.id;
+          console.log(req.session.userid);
+          next();
+        },
+      );
     }
-
-    // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 맞는 비밀번호인지 확인.
-    User.comparePassword(
-      req.body.password,
-      userInfo.password,
-      (err, isMatch) => {
-        // bcrypt compare 함수 동작 중 오류 발생
-        if (err) return res.status(401).json(err);
-        // 비밀번호가 일치하지 않는다면,
-        if (!isMatch) {
-          return res.status(401).json({
-            success: false,
-            message: '비밀번호가 틀렸습니다.',
-          });
-        }
-        // 사용자를 찾으면 세션에 userId 저장.
-        req.session.userid = userInfo.id;
-        console.log(req.session.userid);
-        next();
-      },
-    );
   });
 };
 exports.sendLoginPage = function (req, res) {

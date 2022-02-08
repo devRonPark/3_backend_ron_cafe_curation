@@ -1,22 +1,22 @@
 const express = require('express');
-// Logger
-const morgan = require('morgan');
 // session 객체를 req 에 추가해주는 모듈
 const session = require('express-session');
 require('dotenv').config();
 const sessionStore = require('./config/sessionStore');
 const userRouter = require('./routes/user.routes');
 const { loadUserData, addLogout } = require('./middlewares/middlewares');
+const PORT = process.env.PORT || 3000;
 
 // express 인스턴스 생성
 const app = express();
 
-app.set('port', process.env.PORT || 3000);
+// 로거 출력용 logger, morgan
+global.logger || (global.logger = require('./config/logger')); // 전역에서 사용
+const morganMiddleware = require('./config/morganMiddleware');
+app.use(morganMiddleware); // 콘솔창에 통신결과 나오게 해주는 미들웨어
 
 // 미들웨어 등록 시작, 아래 미들웨어들은 내부적으로 next() 가 실행됨.
 app.use(
-  // 요청, 응답에 대한 좀 더 디테일한 로그 출력
-  morgan('dev'),
   // json request body 파싱
   express.json(),
   // 요청 경로의 querystring 해석
@@ -46,6 +46,6 @@ app.get('/debug', (req, res) => {
   });
 });
 
-app.listen(app.get('port'), () => {
-  console.log(`Example app listening at http://localhost:${app.get('port')}`);
+app.listen(PORT, () => {
+  logger.debug(`Server On... Express is running on http://localhost:${PORT}`);
 });

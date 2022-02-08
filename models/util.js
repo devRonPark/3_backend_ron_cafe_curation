@@ -9,7 +9,9 @@ moment.tz.setDefault('Asia/Seoul');
 colors.enable();
 
 exports.printSqlLog = sqlStatement => {
-  console.log(
-    `${sqlStatement} [${moment().format('YYYY-MM-DD HH:mm:ss')}]`.rainbow,
+  logger.info(
+    `[ 실행된 SQL문 ] ${sqlStatement} [${moment().format(
+      'YYYY-MM-DD HH:mm:ss',
+    )}]`.blue,
   );
 };
