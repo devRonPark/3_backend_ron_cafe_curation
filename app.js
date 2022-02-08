@@ -5,7 +5,6 @@ require('dotenv').config();
 const sessionStore = require('./config/sessionStore');
 const userRouter = require('./routes/user.routes');
 const { loadUserData, addLogout } = require('./middlewares/middlewares');
-const PORT = process.env.PORT || 3000;
 
 // express 인스턴스 생성
 const app = express();
@@ -19,7 +18,7 @@ app.use(morganMiddleware); // 콘솔창에 통신결과 나오게 해주는 미�
 app.use(
   // json request body 파싱
   express.json(),
-  // 요청 경로의 querystring 해석
+  // url을 통해 전달되는 데이터에 한글, 공백 등과 같은 문자가 포함될 경우 제대로 인식되지 않는 문제 해결
   express.urlencoded({ extended: false }),
   // DB에 session 테이블 추가
   session({
@@ -46,6 +45,4 @@ app.get('/debug', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  logger.debug(`Server On... Express is running on http://localhost:${PORT}`);
-});
+module.exports = app;

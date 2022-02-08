@@ -1,6 +1,7 @@
-const winston = require('winston');
+const { addColors, createLogger, transports, format } = require('winston');
+const { combine, timestamp, label, colorize, printf } = format;
 require('winston-daily-rotate-file');
-const logDir = `${__dirname}`;
+const logDir = `${__dirname}/logs`;
 
 // 레벨 설정
 const levels = {
@@ -25,45 +26,65 @@ const colors = {
   debug: 'blue',
 };
 // 로그 파일에 로그 종류 별 색상 옵션 적용
-winston.addColors(colors);
-// log 출력 format 바꾸기
-const format = winston.format.combine(
-  winston.format.timestamp({ format: ' YYYY-MM-DD HH:MM:SS ||' }), // 표시 날짜 형식 변경
-  winston.format.colorize({ all: true }), // log level 별 색상 표시
-  winston.format.printf(
-    // 실제 출력 양식
-    info => `${info.timestamp} [ ${info.level} ] ▶ ${info.message}`,
-  ),
+addColors(colors);
+const printFormat = printf(
+  ({ timestamp, label, level, message }) =>
+    `${timestamp} ${label ? '{' + label + '}' : ''} [ ${level} ] ▶ ${message}`,
 );
+const printLogFormat = {
+  file: combine(
+    label({
+      label: 'ZZINCAFE_SERVICE_BACKEND',
+    }),
+    timestamp({ format: 'YYYY-MM-DD HH:MM:SS ||' }), // 표시 날짜 형식 변경
+    printFormat,
+  ),
+  console: combine(
+    timestamp({ format: 'HH:MM:SS ||' }),
+    colorize({ all: true }), // log level 별 색상 표시
+    printFormat,
+  ),
+};
+const options = {
+  infoLogFile: new transports.DailyRotateFile({
+    level: 'info',
+    format: printLogFormat.file,
+    datePattern: 'YYYY-MM-DD',
+    dirname: logDir,
+    filename: '%DATE%.log',
+    zippedArchive: true,
+    handleExceptions: true,
+    maxFiles: 30,
+  }),
+  errLogFile: new transports.DailyRotateFile({
+    level: 'error',
+    format: printLogFormat.file,
+    datePattern: 'YYYY-MM-DD',
+    dirname: logDir + '/error',
+    filename: '%DATE%.error.log',
+    zippedArchive: true,
+    maxFiles: 30,
+  }),
+  console: new transports.Console({
+    format: printLogFormat.console,
+    handleExceptions: true,
+  }),
+};
 // winston logger 생성
-const logger = winston.createLogger({
-  format,
+const logger = createLogger({
   level: level(),
   // 남길 logger 파일 설정
   transports: [
     // info 레벨 로그를 저장할 파일 설정
-    new winston.transports.DailyRotateFile({
-      level: 'info',
-      datePattern: 'YYYY-MM-DD',
-      dirname: logDir,
-      filename: '%DATE%.log',
-      zippedArchive: true,
-      handleExceptions: true,
-      maxFiles: 30,
-    }),
+    options.infoLogFile,
     // error 레벨 로그를 저장할 파일 설정
-    new winston.transports.DailyRotateFile({
-      level: 'error',
-      datePattern: 'YYYY-MM-DD',
-      dirname: logDir + '/error',
-      filename: '%DATE%.error.log',
-      zippedArchive: true,
-      maxFiles: 30,
-    }),
-    new winston.transports.Console({
-      handleExceptions: true,
-    }),
+    options.errLogFile,
   ],
 });
+// 현재 환경이 개발용 서버일 경우
+if (process.env.NODE_ENV !== 'production') {
+  // 콘솔창에 로그 출력 허용
+  logger.add(options.console);
+}
 
 module.exports = logger;

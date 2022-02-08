@@ -9,7 +9,7 @@ const db = mysql.createConnection({
 
 db.connect(function (err) {
   if (err) throw err;
-  logger.debug('DB Connected!');
+  logger.info('DB Connected!');
 });
 
 module.exports = db;

@@ -5,6 +5,7 @@ const Logger = require('../config/logger');
 
 // 통신할 때 출력하는 stream 메소드 오버라이딩
 // Morgan은 console.log 대신 커스텀 로거 사용
+// stream : 데이터가 오고 가는 통로
 const stream = {
   write: message => {
     // Logger 함수의 info 레벨로 출력
