@@ -31,10 +31,10 @@ app.use(
   addLogout(),
 );
 
-app.use('/user', userRouter);
 app.get('/', (req, res) => {
   res.json(req.userInfo);
 });
+app.use('/user', userRouter);
 app.get('/debug', (req, res) => {
   console.log(req.session.userid);
   if (!req.session.userid) {

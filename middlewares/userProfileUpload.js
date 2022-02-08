@@ -17,33 +17,32 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage }).single('profile');
+// 파일 포함 여부 검사 및 파일 업로드, req.body 파싱
 const uploadFile = function (req, res, next) {
   upload(req, res, function (err) {
-    // 폼 데이터 전송 시 필드명 불일치 => 업로드 할 파일이 존재하지 않는 경우,
-    if (!req.file) {
-      if (err instanceof MulterError) {
-        // 폼 데이터 전송 시 파일은 포함되어 있는데 필드명이 불일치하는 경우
-        console.log('필드명이 일치하지 않음.');
-        return next(err);
-        // 폼 데이터 전송 시 파일이 포함되어 있지 않은 경우
-      } else {
-        // 그 다음 미들웨어 무사히 동작함.
-        next();
+    try {
+      // 폼 데이터 전송 시 필드명 불일치 => 업로드 할 파일이 존재하지 않는 경우,
+      if (!req.file) {
+        if (err instanceof multer.MulterError) {
+          // 폼 데이터 전송 시 파일은 포함되어 있는데 필드명이 불일치하는 경우
+          console.log('필드명이 일치하지 않음.');
+          throw err;
+          // 폼 데이터 전송 시 파일이 포함되어 있지 않은 경우
+        } else {
+          // 그 다음 미들웨어 무사히 동작함.
+          return next();
+        }
       }
+    } catch (err) {
+      return next(err);
     }
+
     const imagePath = `/assets/users/${req.file.filename}`; // image 경로 만들기
     req.body.profile_image_path = imagePath;
     next();
   });
 };
-const uploadCallback = function (req, res, next) {
-  const imagePath = `/assets/users/${req.file.filename}`; // image 경로 만들기
-  req.body.profile_image_path = imagePath;
-  next();
-};
 
 module.exports = {
-  upload,
-  uploadCallback,
   uploadFile,
 };

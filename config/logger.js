@@ -79,12 +79,8 @@ const logger = createLogger({
     options.infoLogFile,
     // error 레벨 로그를 저장할 파일 설정
     options.errLogFile,
+    options.console,
   ],
 });
-// 현재 환경이 개발용 서버일 경우
-if (process.env.NODE_ENV !== 'production') {
-  // 콘솔창에 로그 출력 허용
-  logger.add(options.console);
-}
 
 module.exports = logger;

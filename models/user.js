@@ -1,11 +1,14 @@
 // models/user.js
 const bcrypt = require('bcrypt');
+const db = require('../config/mysql');
 // 데이터베이스에 직접 접근하여 데이터 조회, 변경
 const mysql = require('../config/mysql');
 const { printSqlLog } = require('./util');
+const moment = require('moment');
 
 // 사용자 객체 생성자 함수
 let User = function (user) {
+  this.id = user.id || null;
   this.email = user.email;
   this.password = user.password;
   this.name = user.name;
@@ -182,6 +185,65 @@ User.update = function (email, user, result) {
 
   // 콘솔 창에 sql 문 출력
   printSqlLog(executedSql.sql);
+};
+User.save = function (userInfo) {
+  // db 데이터 변경 작업은 비동기 동작임.
+  return new Promise(function (resolve, reject) {
+    let executedSql;
+    const timestamp = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
+    const { profile_image_path, name, id } = userInfo;
+    // 변경하고자 하는 정보에 프로필 이미지가 없다면,
+    if (profile_image_path === null) {
+      // 닉네임만 업데이트
+      const query = 'update users set name=?,modified_at=? where id=?';
+      executedSql = mysql.query(
+        query,
+        [userInfo.name, timestamp, userInfo.id],
+        err => {
+          if (err) {
+            reject(err);
+          } else {
+            console.log('처리 완료');
+            resolve({ success: true });
+          }
+        },
+      );
+      // 변경하고자 하는 정보에 닉네임이 없다면
+    } else if (!name) {
+      // 프로필 이미지만 업데이트
+      const query =
+        'update users set profile_image_path=?,modified_at=? where id=?';
+      executedSql = mysql.query(
+        query,
+        [userInfo.profile_image_path, timestamp, userInfo.id],
+        err => {
+          if (err) {
+            return reject(err);
+          } else {
+            return resolve({ success: true });
+          }
+        },
+      );
+    } else {
+      // 닉네임 및 프로필 이미지 전부 업데이트
+      const query =
+        'update users set name=?,profile_image_path=?,modified_at=? where id=?';
+      executedSql = mysql.query(
+        query,
+        [userInfo.name, userInfo.profile_image_path, timestamp, userInfo.id],
+        err => {
+          if (err) {
+            return reject(err);
+          } else {
+            return resolve({ success: true });
+          }
+        },
+      );
+    }
+
+    // 콘솔 창에 sql 문 출력
+    printSqlLog(executedSql.sql);
+  });
 };
 
 module.exports = User;

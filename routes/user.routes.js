@@ -95,7 +95,9 @@ userRouter.post('/auth/email', UserController.authEmail);
 userRouter.put(
   '/me/edit/profile',
   isAuthenticated,
-  [validateUsername, validatePhoneNumber, validateCallback], // 입력 값 유효성 검사
+  uploadFile,
+  [validateUsername, validateCallback], // 입력 값 유효성 검사
+  UserController.updateProfileInfo,
 );
 // 2. 휴대전화 변경
 
@@ -115,4 +117,8 @@ userRouter.put(
 // 사용자 비밀번호 변경 (PATCH /user/edit/password)
 // 클라이언트 로직
 // 1. 비밀번호 찾기를 통해 새로
+userRouter.use(function (err, req, res, next) {
+  console.log('err middleware: ', err);
+});
+
 module.exports = userRouter;

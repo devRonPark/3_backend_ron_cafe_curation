@@ -220,12 +220,27 @@ exports.findPassword = function (req, res) {
         // 임시 비밀번호가 포함된 이메일 발송
         sendEmailForNewPassword('jspark9236@naver.com', temporaryPassword)
           .then(result => {
+            console.log('success');
             res.status(200).json({ message: 'The Mail is Sent.' });
           })
           .catch(err => {
+            console.log('error');
             res.status(500).send(err);
           });
       }
     });
   });
+};
+exports.updateProfileInfo = async (req, res, next) => {
+  const { userid } = req.session;
+  req.body.id = userid;
+
+  try {
+    const user = new User(req.body);
+    const result = await User.save(user);
+    console.log(result);
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    return next(err); // 에러 미들웨어에서 처리
+  }
 };

@@ -1,6 +1,7 @@
 const { body, check, validationResult } = require('express-validator');
 
 exports.validateUsername = function (req, res, next) {
+  console.log('validate username');
   check('name')
     .exists({ checkFalsy: true })
     .withMessage('이름을 반드시 입력해주시기 바랍니다.')
@@ -67,5 +68,6 @@ exports.validateCallback = function (req, res, next) {
       message: result.array()[0].msg,
     });
   }
+  console.log('no errors');
   next();
 };
