@@ -243,3 +243,15 @@ exports.updateProfileInfo = async (req, res, next) => {
     return res.status(500).json({ success: false, message: err.message }); // 에러 미들웨어에서 처리
   }
 };
+exports.updatePhoneNumber = async (req, res, next) => {
+  const { userid } = req.session;
+  req.body.id = userid;
+
+  try {
+    const user = new User(req.body);
+    const result = await User.updatePhoneNumber(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message }); // 에러 미들웨어에서 처리
+  }
+};

@@ -1,5 +1,4 @@
 const express = require('express');
-const { check } = require('express-validator');
 
 const userRouter = express.Router();
 const UserController = require('../controllers/user.controller');
@@ -20,7 +19,10 @@ const {
   isAuthenticated,
   isNotAuthenticated,
 } = require('../middlewares/middlewares');
-const res = require('express/lib/response');
+const smtpTransporter = require('../config/smtpTransporter');
+const User = require('../models/user');
+const bcrypt = require('bcrypt');
+const { logger } = require('../config/smtpTransporter');
 
 // 사용자 정보 조회
 userRouter.get('/', UserController.findAll);
@@ -51,7 +53,7 @@ userRouter.post(
 // 사용자 로그인
 userRouter.post(
   '/login',
-  [validateEmail, validatePassword, validateCallback], // 입력 값 유효성 검사
+  [validateEmail, validateCallback], // 입력 값 유효성 검사
   UserController.authenticate,
   (req, res) => res.sendStatus(200),
 );
@@ -102,24 +104,117 @@ userRouter.put(
   UserController.updateProfileInfo,
 );
 // 2. 휴대전화 변경
-userRouter.put('/edit/phone_number', isAuthenticated, [
-  validatePhoneNumber,
-  validateCallback,
-]);
+//   - req.session.userid 가 존재하는 경우에만 동작함.
+//   - 사용자가 휴대폰 번호를 변경한다
+//   - 클라이언트로부터 전달 받은 데이터의 유효성 검사 : req.body.phone_number 이 존재하면 validatePhoneNumber
+//   - req.session.userid 를 기준으로 데이터베이스 업데이트
+userRouter.put(
+  '/edit/phone_number',
+  isAuthenticated,
+  [validatePhoneNumber, validateCallback],
+  UserController.updatePhoneNumber,
+);
 // 3. 비밀번호 변경
+//   - 비밀번호 변경을 요청한 회원이 데이터베이스에 존재하는지 확인(findOne)
+//   - 서버에서 세션 객체에 생성하여 데이터베이스에 저장
+//   - nodemailer 를 통해 회원 이메일로 링크 전송
+//   - 회원은 링크에 접속하여 새로운 비밀번호 설정하고(여기서 유효성 검사 실시?) 서버로 전송
+//   - 서버에서는 사용자가 입력한 현재 비밀번호와 데이터베이스에 저장된 비밀번호가 일치하는지 확인
+//   - update 쿼리문으로 비밀번호 재설정 완료
+//   - (비밀번호가 변경된 경우)데이터베이스 업데이트 후 현재 로그인 된 세션 삭제
+// -> 비밀번호 초기화 이메일 발송 API
+userRouter.post(
+  '/edit/password',
+  isAuthenticated,
+  async function (req, res, next) {
+    // 회원 이메일로 링크 전송
+    const { email } = req.userInfo;
+    try {
+      // SMTP 연결 설정 검증
+      smtpTransporter.verify(function (error, success) {
+        if (error) console.log(error);
+        else {
+          console.log('Service is ready to take our messages.');
+        }
+      });
 
-// 클라이언트 로직
-// 1. 로그인한 사용자가 마이페이지에서 '회원정보 수정' 버튼을 클릭한다.
-// 2. 회원정보 수정 페이지로 넘어가서 바꾸고 싶은 정보를 입력한다.
-// 3. '제출하기' 버튼을 누른다.
-// 서버 로직
-// ✔ 1. 사용자 로그인 여부 먼저 체크 (req.session.userid 존재 여부로 체크)
-// ✔ 2. 클라이언트로부터 전달 받은 데이터의 유효성 검사
-// 3. 유효성 검사 통과 시 사용자 객체 생성
-// 4. 데이터베이스 업데이트
-// 5. (비밀번호가 변경된 경우) 데이터베이스 업데이트 후 현재 세션 삭제
+      // 송신자에게 보낼 메시지 작성
+      const message = {
+        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        to: email, // 수신자 이메일 주소
+        subject: '☕ ZZINCAFE 비밀번호 초기화 메일',
+        html: `
+        <p>비밀번호 초기화를 위해서는 아래의 URL 을 클릭해 주세요.</p>
+        <a href="http://localhost:3000/user/reset/password/${req.session.userid}">👉클릭</a>
+      `,
+      };
+      const result = await smtpTransporter.sendMail(message, (error, info) => {
+        if (error) {
+          return res.status(400);
+        } else {
+          return res.status(200).send({ success: true });
+        }
+      });
+      smtpTransporter.close();
+    } catch (err) {
+      res.send(err);
+    }
+  },
+);
+// -> 현재 비밀번호, 새로 변경할 비밀번호 입력 후 업데이트 요청
+userRouter.post(
+  '/reset/password/:userId',
+  [
+    validatePassword('currentPassword'),
+    validatePassword('password'),
+    validateCallback,
+  ], // 유효성 검증
+  async (req, res, next) => {
+    const { userId } = req.params;
+    const { currentPassword } = req.body;
+    // 비밀번호 변경 메일 발송 시 발급된 세션 키 값이 존재하면,
+    try {
+      // 입력된 현재 비밀번호가 맞는지 확인 => 데이터베이스 조회 동작
+      const passwordInDb = await User.getPasswordById({
+        id: userId,
+      });
+      // 입력받은 비밀번호와 데이터베이스 비밀번호 비교
+      const isMatch = await bcrypt.compare(
+        currentPassword,
+        passwordInDb.password,
+      );
+      // 입력된 현재 비밀번호가 일치한다면
+      if (isMatch) {
+        next();
+      } else {
+        // 클라이언트의 잘못된 비밀번호 입력에 따른 오류 처리
+        return res
+          .status(404)
+          .json({ message: '입력된 비밀번호가 일치하지 않습니다.' });
+      }
+      // 암호화된 newPassword 데이터베이스에 저장
+      // => User.updatePassword 호출
+    } catch (err) {
+      logger.error(err.stack);
+      return res.status(500).json({ message: err.message, stack: err.stack });
+    }
+  },
+  passwordEncryption, // 입력된 newPassword 암호화
+  async (req, res) => {
+    try {
+      const result = await User.updatePassword({
+        id: req.params.userId,
+        password: req.body.password,
+      });
+      req.logout(); // 세션 데이터 삭제
+      return res
+        .status(200)
+        .json({ success: true, message: 'The password is updated now.' });
+    } catch (err) {
+      logger.error(err.stack);
+      return res.status(500).json({ message: err.message, stack: err.stack });
+    }
+  },
+);
 
-// 사용자 비밀번호 변경 (PATCH /user/edit/password)
-// 클라이언트 로직
-// 1. 비밀번호 찾기를 통해 새로
 module.exports = userRouter;

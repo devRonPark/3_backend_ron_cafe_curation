@@ -125,6 +125,25 @@ User.getUserIdByPhoneNumberAndEmail = function (userInfo, result) {
   // 콘솔 창에 sql 문 출력
   printSqlLog(executedSql.sql);
 };
+// 세션에 저장된 userid 로 사용자 비밀번호 가져오기
+User.getPasswordById = function (userInfo) {
+  return new Promise((resolve, reject) => {
+    const executedSql = mysql.query(
+      'select password from users where id = ?',
+      [userInfo.id],
+      (err, res) => {
+        if (err) {
+          return reject(err);
+        } else {
+          return resolve(JSON.parse(JSON.stringify(res[0])));
+        }
+      },
+    );
+
+    // 콘솔 창에 sql 문 출력
+    printSqlLog(executedSql.sql);
+  });
+};
 // 사용자 등록
 User.create = function (newUser, result) {
   const executedSql = mysql.query(
@@ -159,19 +178,24 @@ User.delete = function (email, result) {
   printSqlLog(executedSql.sql);
 };
 // 사용자 비밀번호 정보 수정
-User.updatePassword = function (user, result) {
-  console.log('user: ', user);
-  const executedSql = mysql.query(
-    'update users set password = ? where id = ?',
-    [user.password, user.id],
-    function (err, res) {
-      if (err) return result(err, null);
-      result(null, res);
-    },
-  );
+User.updatePassword = function (user) {
+  return new Promise((resolve, reject) => {
+    console.log('user: ', user);
+    const executedSql = mysql.query(
+      'update users set password = ? where id = ?',
+      [user.password, user.id],
+      function (err, res) {
+        if (err) {
+          return reject(err);
+        } else {
+          return resolve({ success: true });
+        }
+      },
+    );
 
-  // 콘솔 창에 sql 문 출력
-  printSqlLog(executedSql.sql);
+    // 콘솔 창에 sql 문 출력
+    printSqlLog(executedSql.sql);
+  });
 };
 // 사용자 정보 수정
 User.update = function (email, user, result) {
@@ -194,7 +218,7 @@ User.update = function (email, user, result) {
   // 콘솔 창에 sql 문 출력
   printSqlLog(executedSql.sql);
 };
-User.save = function (userInfo) {
+User.updateProfileInfo = function (userInfo) {
   // db 데이터 변경 작업은 비동기 동작임.
   return new Promise(function (resolve, reject) {
     let executedSql;
@@ -250,6 +274,30 @@ User.save = function (userInfo) {
 
     // 콘솔 창에 sql 문 출력
     printSqlLog(executedSql.sql);
+  });
+};
+User.updatePhoneNumber = function (userInfo) {
+  // db 데이터 변경 작업은 비동기 동작임.
+  return new Promise(function (resolve, reject) {
+    const timestamp = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
+    const { phone_number, id } = userInfo;
+    // 변경하고자 하는 정보에 휴대폰 번호가 있다면,
+    if (phone_number) {
+      const query = 'update users set phone_number=?,modified_at=? where id=?';
+      const executedSql = mysql.query(
+        query,
+        [phone_number, timestamp, id],
+        err => {
+          if (err) {
+            return reject(err);
+          } else {
+            return resolve({ success: true });
+          }
+        },
+      );
+      // 콘솔 창에 sql 문 출력
+      printSqlLog(executedSql.sql);
+    }
   });
 };
 
