@@ -91,9 +91,6 @@ User.findById = function (id) {
       next(err);
     }
   });
-
-  // 콘솔 창에 sql 문 출력
-  printSqlLog(executedSql.sql);
 };
 // 사용자 휴대폰 번호로 데이터베이스 조회
 // @returns emailValue in the database
@@ -197,27 +194,6 @@ User.updatePassword = function (user) {
     printSqlLog(executedSql.sql);
   });
 };
-// 사용자 정보 수정
-User.update = function (email, user, result) {
-  const executedSql = mysql.query(
-    'update users set name=?,email=?,password=?,phone_number=?,profile_image_path=?,modified_at=?',
-    [
-      user.name,
-      user.email,
-      user.password,
-      user.phone_number,
-      user.profile_image_path,
-      CURRENT_TIMESTAMP,
-    ],
-    function (err, res) {
-      if (err) return result(err, null);
-      result(null, res);
-    },
-  );
-
-  // 콘솔 창에 sql 문 출력
-  printSqlLog(executedSql.sql);
-};
 User.updateProfileInfo = function (userInfo) {
   // db 데이터 변경 작업은 비동기 동작임.
   return new Promise(function (resolve, reject) {
@@ -298,6 +274,22 @@ User.updatePhoneNumber = function (userInfo) {
       // 콘솔 창에 sql 문 출력
       printSqlLog(executedSql.sql);
     }
+  });
+};
+// 사용자 탈퇴에 따른 상태 비활성화 및 삭제일자 저장
+User.disable = function (userId) {
+  return new Promise((resolve, reject) => {
+    const timestamp = moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
+    const query = 'update users set status=?,dropped_at=? where id=?';
+    const executedSql = mysql.query(query, ['N', timestamp, userId], err => {
+      if (err) {
+        return reject(err);
+      } else {
+        return resolve({ success: true });
+      }
+    });
+    // 콘솔 창에 sql 문 출력
+    printSqlLog(executedSql.sql);
   });
 };
 

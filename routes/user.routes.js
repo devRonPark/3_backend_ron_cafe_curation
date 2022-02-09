@@ -216,5 +216,25 @@ userRouter.post(
     }
   },
 );
+// 회원 탈퇴
+//   - req.session.userid 가 존재하는 경우에만 동작함.
+// 탈퇴 요청 들어올 시 회원 상태를 비활성화로 변경시켜준다.
+userRouter.delete('/delete', isAuthenticated, async (req, res) => {
+  try {
+    const result = await User.disable(req.session.userid);
+    if (result.success) {
+      // 사용자 탈퇴에 따른 현재 활성화된 로그인 세션 삭제
+      req.logout();
+      return res.status(200).json(result);
+    } else {
+      return res.json({ success: false, message: '데이터베이스 오류' });
+    }
+  } catch (err) {
+    logger.error(err.stack);
+    return res
+      .status(500)
+      .json({ success: false, message: err.message, stack: err.stack });
+  }
+});
 
 module.exports = userRouter;

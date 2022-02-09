@@ -34,8 +34,8 @@ exports.authenticate = function (req, res, next) {
     // user[0] => rowDataPacket
     // convert from rowDataPacket to plain object
     userInfo = JSON.parse(JSON.stringify(user[0]));
-    // user 가 존재하지 않으면
-    if (!userInfo) {
+    // user 가 존재하지 않거나 현재 user 가 탈퇴했다면,
+    if (!userInfo || userInfo.status === 'N') {
       return res.status(404).json({
         success: false,
         message: '제공된 이메일에 해당하는 사용자가 없습니다.',
