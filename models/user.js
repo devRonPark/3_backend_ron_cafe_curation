@@ -74,15 +74,23 @@ User.comparePassword = function (plainPassword, passwordInDb, result) {
   });
 };
 // 사용자 인덱스 값으로 검색
-User.findById = function (id, result) {
-  const executedSql = mysql.query(
-    'select * from users where id = ? ',
-    id,
-    function (err, res) {
-      if (err) return result(err);
-      result(null, res);
-    },
-  );
+User.findById = function (id) {
+  return new Promise((resolve, reject) => {
+    try {
+      const executedSql = mysql.query(
+        'select * from users where id = ? ',
+        id,
+        function (err, res) {
+          if (err) return reject(err);
+          return resolve(res);
+        },
+      );
+      // 콘솔 창에 sql 문 출력
+      printSqlLog(executedSql.sql);
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // 콘솔 창에 sql 문 출력
   printSqlLog(executedSql.sql);
@@ -201,10 +209,9 @@ User.save = function (userInfo) {
         [userInfo.name, timestamp, userInfo.id],
         err => {
           if (err) {
-            reject(err);
+            return reject(err);
           } else {
-            console.log('처리 완료');
-            resolve({ success: true });
+            return resolve({ success: true });
           }
         },
       );

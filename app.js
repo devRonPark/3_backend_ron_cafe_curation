@@ -33,6 +33,7 @@ app.use(
 
 app.get('/', (req, res) => {
   res.json(req.userInfo);
+  console.log('hi');
 });
 app.use('/user', userRouter);
 app.get('/debug', (req, res) => {

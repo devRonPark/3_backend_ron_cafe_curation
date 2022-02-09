@@ -237,10 +237,9 @@ exports.updateProfileInfo = async (req, res, next) => {
 
   try {
     const user = new User(req.body);
-    const result = await User.save(user);
-    console.log(result);
+    const result = await User.save(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
     return res.status(200).json({ success: true });
   } catch (err) {
-    return next(err); // 에러 미들웨어에서 처리
+    return res.status(500).json({ success: false, message: err.message }); // 에러 미들웨어에서 처리
   }
 };

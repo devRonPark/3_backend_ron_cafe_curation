@@ -1,4 +1,5 @@
 const express = require('express');
+const { check } = require('express-validator');
 
 const userRouter = express.Router();
 const UserController = require('../controllers/user.controller');
@@ -19,6 +20,7 @@ const {
   isAuthenticated,
   isNotAuthenticated,
 } = require('../middlewares/middlewares');
+const res = require('express/lib/response');
 
 // 사용자 정보 조회
 userRouter.get('/', UserController.findAll);
@@ -93,14 +95,17 @@ userRouter.post('/auth/email', UserController.authEmail);
 //   - 클라이언트로부터 전달 받은 데이터의 유효성 검사 : req.body.nickname 이 존재하면 validateUsername
 //   - req.session.userid 를 기준으로 데이터베이스 업데이트
 userRouter.put(
-  '/me/edit/profile',
+  '/edit/profile',
   isAuthenticated,
   uploadFile,
   [validateUsername, validateCallback], // 입력 값 유효성 검사
   UserController.updateProfileInfo,
 );
 // 2. 휴대전화 변경
-
+userRouter.put('/edit/phone_number', isAuthenticated, [
+  validatePhoneNumber,
+  validateCallback,
+]);
 // 3. 비밀번호 변경
 
 // 클라이언트 로직
@@ -117,8 +122,4 @@ userRouter.put(
 // 사용자 비밀번호 변경 (PATCH /user/edit/password)
 // 클라이언트 로직
 // 1. 비밀번호 찾기를 통해 새로
-userRouter.use(function (err, req, res, next) {
-  console.log('err middleware: ', err);
-});
-
 module.exports = userRouter;
