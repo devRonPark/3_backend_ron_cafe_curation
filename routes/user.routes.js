@@ -16,7 +16,7 @@ const {
   checkEmailAlreadyExists,
 } = require('../middlewares/checkEmailAlreadyExists');
 const {
-  isAuthenticated,
+  isAuthorized,
   isNotAuthenticated,
 } = require('../middlewares/middlewares');
 const smtpTransporter = require('../config/smtpTransporter');
@@ -61,7 +61,6 @@ userRouter.post(
 userRouter.get('/logout', (req, res, next) => {
   // 로그아웃
   req.logout();
-
   res.sendStatus(200);
 });
 // 사용자 아이디 찾기
@@ -98,7 +97,7 @@ userRouter.post('/auth/email', UserController.authEmail);
 //   - req.session.userid 를 기준으로 데이터베이스 업데이트
 userRouter.put(
   '/edit/profile',
-  isAuthenticated,
+  isAuthorized,
   uploadFile,
   [validateUsername, validateCallback], // 입력 값 유효성 검사
   UserController.updateProfileInfo,
@@ -110,7 +109,7 @@ userRouter.put(
 //   - req.session.userid 를 기준으로 데이터베이스 업데이트
 userRouter.put(
   '/edit/phone_number',
-  isAuthenticated,
+  isAuthorized,
   [validatePhoneNumber, validateCallback],
   UserController.updatePhoneNumber,
 );
@@ -125,7 +124,7 @@ userRouter.put(
 // -> 비밀번호 초기화 이메일 발송 API
 userRouter.post(
   '/edit/password',
-  isAuthenticated,
+  isAuthorized,
   async function (req, res, next) {
     // 회원 이메일로 링크 전송
     const { email } = req.userInfo;
@@ -208,7 +207,7 @@ userRouter.post(
       });
       req.logout(); // 세션 데이터 삭제
       return res
-        .status(200)
+        .status(201)
         .json({ success: true, message: 'The password is updated now.' });
     } catch (err) {
       logger.error(err.stack);
@@ -219,21 +218,17 @@ userRouter.post(
 // 회원 탈퇴
 //   - req.session.userid 가 존재하는 경우에만 동작함.
 // 탈퇴 요청 들어올 시 회원 상태를 비활성화로 변경시켜준다.
-userRouter.delete('/delete', isAuthenticated, async (req, res) => {
+userRouter.delete('/delete', isAuthorized, async (req, res) => {
   try {
-    const result = await User.disable(req.session.userid);
-    if (result.success) {
+    const response = await User.disable(req.session.userid);
+    if (response.state) {
       // 사용자 탈퇴에 따른 현재 활성화된 로그인 세션 삭제
       req.logout();
-      return res.status(200).json(result);
-    } else {
-      return res.json({ success: false, message: '데이터베이스 오류' });
+      return res.sendStatus(204);
     }
   } catch (err) {
     logger.error(err.stack);
-    return res
-      .status(500)
-      .json({ success: false, message: err.message, stack: err.stack });
+    return res.json({ message: err.message });
   }
 });
 

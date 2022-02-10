@@ -11,14 +11,14 @@ const logger = require('../config/logger');
 exports.findAll = async function (req, res) {
   try {
     const response = await User.findAll();
-    const userInfo = JSON.parse(JSON.stringify(response[0]));
-    if (!userInfo) {
+    const usersInfo = response.data;
+    if (!usersInfo.length) {
       return res.status(404).json({ message: 'Users_Not_Found' });
     }
-    return res.status(200).json(userInfo);
+    return res.status(200).json(usersInfo);
   } catch (err) {
-    logger.error(err.message);
-    return res.status(500).json({ message: err.message });
+    logger.error(err.stack);
+    return res.json({ message: err.message });
   }
 };
 // 회원가입 컨트롤러
@@ -28,33 +28,27 @@ exports.create = async function (req, res, next) {
   try {
     // 데이터베이스에 사용자 정보 저장
     const result = await User.create(newUser);
-    return res.status(201).json({
-      data: result,
-    });
+    return res.sendStatus(201);
   } catch (err) {
     logger.error(err.message);
-    return res.status(500).json({ message: err.message });
+    return res.json({ message: err.message });
   }
 };
 exports.authenticate = async function (req, res, next) {
   try {
+    const { password } = req.body;
     // 요청된 이메일을 데이터베이스에서 있는지 찾는다.
     const response = await User.findByEmail({ email: req.body.email });
-    // user[0] => rowDataPacket
-    // convert from rowDataPacket to plain object
-    const userInfo = JSON.parse(JSON.stringify(response[0]));
+    const userInfo = response.data[0];
 
     // user 가 존재하지 않거나 현재 user 가 탈퇴했다면,
-    if (!userInfo || userInfo.status === 'N') {
+    if (!userInfo || userInfo.dropped_at) {
       return res.status(404).json({
         message: 'User_Not_Found',
       });
     }
     // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 맞는 비밀번호인지 확인.
-    const isMatch = await User.comparePassword(
-      req.body.password,
-      userInfo.password,
-    );
+    const isMatch = await User.comparePassword(password, userInfo.password);
 
     // 비밀번호가 일치하지 않는다면,
     if (!isMatch) {
@@ -67,9 +61,9 @@ exports.authenticate = async function (req, res, next) {
     console.log(req.session.userid);
     next();
   } catch (err) {
-    logger.error(err.message);
-    return res.status(500).json({
-      message: 'Internal_Server_Error',
+    logger.error(err.stack);
+    return res.json({
+      message: err.message,
     });
   }
 };
@@ -78,20 +72,20 @@ exports.findEmail = async function (req, res, next) {
     const response = await User.getEmailByPhoneNumber({
       phone_number: req.body.phone_number,
     });
-    const userInfo = JSON.parse(JSON.stringify(response[0]));
+    const userEmail = response.data[0].email;
 
     // user 가 존재하지 않으면
-    if (!userInfo) {
+    if (!userId) {
       return res.status(404).json({
         message: 'User_Not_Found',
       });
     }
 
-    return res.status(200).json({ data: userInfo });
+    return res.status(200).json({ data: userEmail });
   } catch (err) {
-    logger.error(err.message);
-    return res.status(500).json({
-      message: 'Internal_Server_Error',
+    logger.error(err.stack);
+    return res.json({
+      message: err.message,
     });
   }
 };
@@ -192,10 +186,11 @@ exports.updateProfileInfo = async (req, res, next) => {
 
   try {
     const user = new User(req.body);
-    const result = await User.save(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
+    const result = await User.updateProfileInfo(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
     return res.status(201).json({ message: 'Profile_Info_Is_Updated' });
   } catch (err) {
-    return res.status(500).json({ message: err.message }); // 에러 미들웨어에서 처리
+    logger.error(err.stack);
+    return res.json({ message: err.message }); // 에러 미들웨어에서 처리
   }
 };
 // 사용자 휴대폰 번호 정보 업데이트
@@ -205,10 +200,10 @@ exports.updatePhoneNumber = async (req, res, next) => {
 
   try {
     const user = new User(req.body);
-    const result = await User.updatePhoneNumber(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
+    const response = await User.updatePhoneNumber(user); // 데이터베이스에 업데이트하고 성공 여부를 받아온다.
     return res.status(201).json({ message: 'Phone_Number_Info_Is_Updated' });
   } catch (err) {
-    return res.status(500).json({ message: err.message }); // 에러 미들웨어에서 처리
+    return res.json({ message: err.message }); // 에러 미들웨어에서 처리
   }
 };
 exports.sendEmailForNewPassword = async function (req, res, next) {
