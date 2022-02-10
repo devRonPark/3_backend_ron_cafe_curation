@@ -15,4 +15,47 @@ const smtpOption = {
 };
 // SMTP 객체 생성
 const smtpTransporter = nodemailer.createTransport(smtpOption);
-module.exports = smtpTransporter;
+// SMTP 연결 설정 검증
+const verifySmtpConfig = async () => {
+  try {
+    await smtpTransporter.verify();
+    logger.info('Server is ready to take our messages');
+    return true;
+  } catch (err) {
+    logger.error('verifySmtpConfig Function Error: ', err.message);
+    throw new Error(err.message);
+  }
+};
+// 지정된 수신자에게 이메일 발송
+const sendMail = async emailOption => {
+  try {
+    await smtpTransporter.sendMail(emailOption);
+    return true;
+  } catch (err) {
+    logger.error('sendMail Function Error: ', err.message);
+    throw new Error(err.message);
+  }
+};
+const sendMailRun = async emailOption => {
+  try {
+    // SMTP 연결 설정 검증
+    const smtpConnection = await verifySmtpConfig();
+
+    if (smtpConnection) {
+      logger.info('SMTP_SERVER_CONNECTION_SUCCESS');
+    }
+    // 이메일 발송
+    const mailSentResult = await sendMail(emailOption);
+    if (!mailSentResult) {
+      logger.error('EMAIL_SENT_FAILURE');
+      throw new Error('EMAIL_SENT_FAILURE');
+    }
+    smtpTransporter.close();
+    logger.info('EMAIL_SENT_SUCCESS');
+    return true;
+  } catch (err) {
+    logger.error(`sendEmailRun Caught Error: ${err.message}`);
+    throw new Error(err.message);
+  }
+};
+module.exports = { smtpTransporter, verifySmtpConfig, sendMailRun };
