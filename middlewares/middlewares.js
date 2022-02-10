@@ -1,12 +1,12 @@
 const User = require('../models/user');
 
 // 로그인한 상태인지 체크
-exports.isAuthenticated = function (req, res, next) {
+exports.isAuthorized = function (req, res, next) {
   // 현재 로그인한 상태가 아니라면,
   if (req.session && !req.session.userid) {
     console.log('현재 로그인한 사용자가 없음!');
-    // 상태 코드 403: Forbidden
-    return res.status(403).json({ isLoggedIn: false });
+    // 상태 코드 401: Unauthorized
+    return res.status(401).json({ isLoggedIn: false });
   } else {
     // userid 가 있을 경우에만 다음 미들웨어 실행
     next();
