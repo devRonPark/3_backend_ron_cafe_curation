@@ -49,8 +49,7 @@ exports.validateCallback = function (req, res, next) {
   console.log(hasErrors);
   if (hasErrors) {
     return res.status(400).json({
-      success: false,
-      fieldName: result.array(0).param,
+      fieldName: result.array()[0].param,
       message: result.array()[0].msg,
     });
   } else {
