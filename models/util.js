@@ -2,7 +2,7 @@
 const colors = require('colors');
 // 콘솔 창에 현재 날짜 및 시간 출력
 const moment = require('moment');
-const CryptoJS = require('crypto-js');
+const crypto = require('crypto');
 require('moment-timezone');
 // 시간대는 한국 서울 기준
 moment.tz.setDefault('Asia/Seoul');
@@ -25,5 +25,5 @@ exports.generateRandomNumber = function (min, max) {
   return randomNumber;
 };
 exports.generateRandomToken = function () {
-  return CryptoJS.randomBytes(20).toString('hex');
+  return crypto.randomBytes(20).toString('hex');
 };

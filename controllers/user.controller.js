@@ -6,6 +6,7 @@ const {
 const { generateRandomNumber, generateRandomToken } = require('../models/util');
 const { sendMailRun } = require('../config/smtpTransporter');
 const logger = require('../config/logger');
+const Auth = require('../models/auth');
 
 // 사용자 정보 조회
 exports.findAll = async function (req, res) {
@@ -42,7 +43,7 @@ exports.authenticate = async function (req, res, next) {
     const userInfo = response.data[0];
 
     // user 가 존재하지 않거나 현재 user 가 탈퇴했다면,
-    if (!userInfo || userInfo.dropped_at) {
+    if (!userInfo) {
       return res.status(404).json({
         message: 'User_Not_Found',
       });
@@ -225,5 +226,50 @@ exports.sendEmailForNewPassword = async function (req, res, next) {
   } catch (err) {
     logger.error(err.message);
     res.json({ message: err.message });
+  }
+};
+// 비밀번호 초기화 메일 발송
+exports.sendPasswordInitMail = async function (req, res) {
+  try {
+    const { email } = req.body;
+    // 토큰 생성 후 DB에 저장
+    const { token, response } = await getTokenAfterDbSave(req);
+    // 토큰 정보가 DB에 저장되면,
+    if (response.state) {
+      // 송신자에게 보낼 메시지 작성
+      const message = {
+        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        to: email, // 수신자 이메일 주소
+        subject: '☕ ZZINCAFE 비밀번호 초기화 메일',
+        html: `
+        <p>비밀번호 초기화를 위해서는 아래의 URL 을 클릭해 주세요.</p>
+        <a href="http://localhost:3000/user/reset/password/${token}">👉클릭</a>
+      `,
+      };
+      const isMailSent = await sendMailRun(message); // 메일 발송
+      console.log(isMailSent);
+      // 이메일 발송이 완료되면,
+      if (isMailSent) return res.sendStatus(200);
+    }
+  } catch (err) {
+    logger.error(err.stack);
+    return res.json({ message: err.message });
+  }
+};
+const getTokenAfterDbSave = async function (req) {
+  try {
+    const token = generateRandomToken(); // 토큰 생성
+    // auth 테이블에 저장할 토큰 정보 가공
+    const data = {
+      // 데이터 정리
+      token_value: token,
+      user_id: req.session.userid,
+      time_to_live: 300, // 토큰 유효기한 설정(5분)
+    };
+    const response = await Auth.saveToken(data);
+    return { token, response };
+  } catch (err) {
+    logger.error(err.stack);
+    throw new Error(err.message);
   }
 };

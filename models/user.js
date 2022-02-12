@@ -49,6 +49,7 @@ User.findByEmail = async function (user) {
     const query = 'select * from users where email=?';
     const params = user.email;
     const result = await DB('GET', query, params);
+    console.log('result: ', result);
     return result;
   } catch (err) {
     logger.error(err.stack);
@@ -71,6 +72,7 @@ User.findById = async function (user) {
     const query = 'select * from users where id = ?';
     const params = [user.id];
     const result = await DB('GET', query, params);
+    // console.log('result: ', result);
     return result;
   } catch (err) {
     logger.error(err.stack);

@@ -31,10 +31,11 @@ exports.isNotAuthenticated = function (req, res, next) {
 exports.loadUserData = function () {
   return async function (req, res, next) {
     try {
+      console.log('req.session.userid: ', req.session.userid);
       // 로그인한 사용자가 존재한다면,
       if (req.session.userid) {
-        const response = await User.findById(req.session.userid);
-        const userInfo = JSON.parse(JSON.stringify(response[0]));
+        const response = await User.findById({ id: req.session.userid });
+        const userInfo = response.data[0];
         console.log('userInfo: ', userInfo);
 
         if (!userInfo) {
