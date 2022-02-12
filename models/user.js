@@ -4,7 +4,7 @@ const res = require('express/lib/response');
 const logger = require('../config/logger');
 // 데이터베이스에 직접 접근하여 데이터 조회, 변경
 const DB = require('../config/mysql');
-const { printSqlLog, printCurrentTime } = require('./util');
+const { printCurrentTime } = require('./util');
 
 // 사용자 객체 생성자 함수
 let User = function (user) {
