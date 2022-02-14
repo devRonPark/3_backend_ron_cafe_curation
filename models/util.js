@@ -30,7 +30,7 @@ exports.generateRandomNumber = function (min, max) {
 exports.generateRandomToken = function () {
   return crypto.randomBytes(20).toString('hex');
 };
-const convertLocationData = coordinateObj => {
+exports.convertLocationData = coordinateObj => {
   //GRS80(중부원점) 좌표계
   const grs80 =
     '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs';
@@ -40,8 +40,5 @@ const convertLocationData = coordinateObj => {
   // let coord = proj4(fromProjection, toProjection, coordinates);
   // fromProjection : 변환 대상 좌표계, toProjection : 변환 목표 좌표계, coordinates : 객체 또는 배열 형태 (예시 {x: 'x', y: 'y'} 또는 [x, y])
   const coord = proj4(grs80, wgs84, coordinateObj);
-  console.log('coord: ', coord);
   return { latitude: coord.x, longitude: coord.y };
 };
-// 예시
-convertLocationData({ x: 199901.976388039, y: 455159.34378238 });
