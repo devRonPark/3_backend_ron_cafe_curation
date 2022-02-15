@@ -4,6 +4,7 @@ const session = require('express-session');
 require('dotenv').config();
 const sessionStore = require('./config/sessionStore');
 const userRouter = require('./routes/user.routes');
+const cafeRouter = require('./routes/cafe.routes');
 const { loadUserData, addLogout } = require('./middlewares/middlewares');
 
 // express 인스턴스 생성
@@ -33,9 +34,10 @@ app.use(
 
 app.get('/', (req, res) => {
   res.json(req.userInfo);
-  console.log('hi');
 });
 app.use('/user', userRouter);
+// 카페 정보 등록, 수정, 삭제할 수 있는 라우터 추가
+app.use('/cafes', cafeRouter);
 app.get('/debug', (req, res) => {
   console.log(req.session.userid);
   if (!req.session.userid) {
