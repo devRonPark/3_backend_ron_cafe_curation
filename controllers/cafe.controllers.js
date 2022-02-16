@@ -134,6 +134,8 @@ exports.getCafeDataByName = async function (req, res) {
       .json({ message: err.message });
   }
 };
+// 전체 리소스에 대한 검색 요청
+// /search?city=서울특별시&gu=()&dong=() : 지번 주소에서 서울 특별시 구, 동 정보를 포함하고 있는 모든 리소스 조회
 exports.getCafeDataByJibunAddr = async function (req, res) {
   try {
     const { city, gu, dong } = req.query;
@@ -142,6 +144,21 @@ exports.getCafeDataByJibunAddr = async function (req, res) {
     return res.status(successCode.OK).json({ data: searchResult });
   } catch (err) {
     logger.error(err.stack);
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
+// 사용자의 카페 정보 업데이트 요청
+// 업데이트 가능한 카페 정보는 이름이나 지번 주소 검색을 통해 데이터를 받아옴.
+// 입력 가능 데이터 : 대표 이미지, 전화번호, 메뉴, 영업시간 등
+exports.updateCafeData = async function (req, res) {
+  try {
+    const { data } = req.body;
+    const response = await Cafe.updateCafeData(data);
+    logger.info(response);
+    return res.sendStatus(successCode.OK);
+  } catch (err) {
     return res
       .status(errorCode.INTERNALSERVERERROR)
       .json({ message: err.message });

@@ -16,4 +16,6 @@ cafeRouter.get('/search', (req, res) => {
     return CafeController.getCafeDataByJibunAddr(req, res);
   }
 });
+// 이미 클라이언트에서 이름 혹은 지번 주소로 GET 요청(검색)을 통해 응답받은 데이터를 전달해준다.
+cafeRouter.patch('/', CafeController.updateCafeData);
 module.exports = cafeRouter;
