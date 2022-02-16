@@ -28,5 +28,6 @@ cafeRouter.patch(
   '/:id/edit/operating-hours',
   CafeController.updateCafeOperHours,
 );
+cafeRouter.delete('/:id/delete', CafeController.deleteCafeInfo);
 
 module.exports = cafeRouter;

@@ -267,5 +267,39 @@ class Cafe {
       throw new Error(err.message);
     }
   }
+  // 테이블에서 cafe_id 와 일치하는 튜플의 status 값 변경
+  static async setStatusOfTbl(tblName, statusValue, id) {
+    try {
+      // cafes 테이블 데이터 status 'D'로 변경
+      const query = `update ${tblName} set status = ? where ${
+        tblName === 'cafes' ? 'id' : 'cafe_id'
+      } = ?`;
+      const params = [statusValue, id];
+      const result = await DB('DELETE', query, params);
+      return result;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
+  // id에 해당하는 카페 정보 삭제 요청
+  static async deleteCafeInfo(cafeInfo) {
+    try {
+      const { id } = cafeInfo;
+      // cafes 테이블, menus 테이블, operating_hours 테이블 데이터 status 'D'로 변경
+      let cafeTblResult, menuTblResult, operHoursTblResult;
+      cafeTblResult = await this.setStatusOfTbl('cafes', 'D', id);
+      menuTblResult = await this.setStatusOfTbl('menus', 'D', id);
+      operHoursTblResult = await this.setStatusOfTbl(
+        'operating_hours',
+        'D',
+        id,
+      );
+      return { cafeTblResult, menuTblResult, operHoursTblResult };
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
 }
 module.exports = Cafe;

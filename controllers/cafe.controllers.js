@@ -5,6 +5,7 @@ const Cafe = require('../models/cafe');
 const { successCode, errorCode } = require('../statusCode');
 const logger = require('../config/logger');
 const { Result } = require('express-validator');
+const res = require('express/lib/response');
 
 // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
 exports.getDataFromPublicAPI = async function (req, res, next) {
@@ -192,7 +193,9 @@ exports.updateCafeInfo = async function (req, res) {
   const cafeInfo = req.body.data;
   try {
     const response = await Cafe.updateCafeInfo(cafeInfo);
-    return res.status(successCode.OK).json({ message: 'CAFE_INFO_UPDATED' });
+    return res
+      .status(successCode.OK)
+      .json({ message: 'CAFE_INFO_UPDATE_REQUEST_SUCCESS' });
 
     // 대표 이미지 & 전화번호 수정
   } catch (err) {
@@ -206,7 +209,9 @@ exports.updateCafeMenus = async function (req, res) {
   try {
     const cafeInfo = req.body.data;
     const response = await Cafe.updateMenuTbl(cafeInfo);
-    return res.status(successCode.OK).json({ message: 'CAFE_MENUS_UPDATED' });
+    return res
+      .status(successCode.OK)
+      .json({ message: 'CAFE_MENUS_UPDATE_REQUEST_SUCCESS' });
   } catch (err) {
     return res
       .status(errorCode.INTERNALSERVERERROR)
@@ -220,10 +225,23 @@ exports.updateCafeOperHours = async function (req, res) {
     const response = await Cafe.updateOperHoursTbl(cafeInfo);
     return res
       .status(successCode.OK)
-      .json({ message: 'CAFE_OPERATING_HOURS_UPDATED' });
+      .json({ message: 'CAFE_OPERATING_HOURS_UPDATE_REQUEST_SUCCESS' });
   } catch (err) {
     return res
       .status(errorCode.INTERNALSERVERERROR)
       .json({ message: err.message });
+  }
+};
+// cafe_id 와 일치하는 모든 데이터(카페 정보, 메뉴, 영업시간) 삭제 요청
+exports.deleteCafeInfo = async function (req, res) {
+  try {
+    const cafeInfo = { id: req.params.id };
+    const response = await Cafe.deleteCafeInfo(cafeInfo);
+    return res
+      .status(successCode.OK)
+      .json({ message: 'DELETE_REQUEST_SUCCESS' });
+  } catch (err) {
+    logger.error(err.stack);
+    throw new Error(err.message);
   }
 };
