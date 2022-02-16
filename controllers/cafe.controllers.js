@@ -164,3 +164,25 @@ exports.updateCafeData = async function (req, res) {
       .json({ message: err.message });
   }
 };
+// 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
+exports.getCafeInfoById = async function (req, res) {
+  try {
+    const { id } = req.params;
+    const responseOfCafeInfo = await Cafe.getCafeInfoById({ id });
+    console.log(responseOfCafeInfo.data);
+    const responseOfMenu = await Cafe.getMenuDataById({ id });
+    console.log(responseOfMenu.data);
+    const responseOfOperHours = await Cafe.getOperHoursDataById({ id });
+    console.log(responseOfOperHours.data);
+    const cafeDetailInfo = {
+      ...responseOfCafeInfo.data[0],
+      menus: responseOfMenu.data,
+      operating_hours: responseOfOperHours.data,
+    };
+    return res.status(200).json({ data: cafeDetailInfo });
+  } catch (err) {
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};

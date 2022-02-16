@@ -68,6 +68,44 @@ class Cafe {
       throw new Error(err.message);
     }
   }
+  // 카페 ID로 카페 정보(이름, 주소, 전화번호) 불러오기
+  static async getCafeInfoById(cafeInfo) {
+    try {
+      const query =
+        'select name, jibun_address, road_address, tel from cafes where id = ?';
+      const params = [cafeInfo.id];
+      const result = await DB('GET', query, params);
+      return result;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
+  // 카페 ID로 카페 메뉴 정보 불러오기
+  static async getMenuDataById(cafeInfo) {
+    try {
+      const query = 'select name, price from menus where cafe_id = ?';
+      const params = [cafeInfo.id];
+      const result = await DB('GET', query, params);
+      return result;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
+  // 카페 ID로 카페 영업시간 정보 불러오기
+  static async getOperHoursDataById(cafeInfo) {
+    try {
+      const query =
+        'select day, is_day_off, start_time, end_time from operating_hours where cafe_id = ?';
+      const params = [cafeInfo.id];
+      const result = await DB('GET', query, params);
+      return result;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
   // 메뉴 정보 등록
   static async updateMenuTbl(cafeInfo) {
     const { id, menus } = cafeInfo;
