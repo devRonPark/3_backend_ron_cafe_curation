@@ -8,4 +8,12 @@ cafeRouter.post(
   CafeController.parseCafeDataRun,
   CafeController.saveDataToDb,
 );
+cafeRouter.get('/search', (req, res) => {
+  if (req.query.name) {
+    return CafeController.getCafeDataByName(req, res);
+  }
+  if (req.query.city && req.query.gu && req.query.dong) {
+    return CafeController.getCafeDataByJibunAddr(req, res);
+  }
+});
 module.exports = cafeRouter;

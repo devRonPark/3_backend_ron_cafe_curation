@@ -118,3 +118,32 @@ exports.saveDataToDb = async function (req, res) {
       .json({ message: err.message });
   }
 };
+// 전체 리소스에 대한 검색 요청
+// /search?q=name%3D스타벅스 : 이름이 스타벅스인 모든 리소스 조회
+exports.getCafeDataByName = async function (req, res) {
+  try {
+    const { name } = req.query;
+    const response = await Cafe.findCafeDataByName(name);
+    const searchResult = response.data;
+    logger.info('response: ', response);
+    return res.status(successCode.OK).json({ data: searchResult });
+  } catch (err) {
+    logger.error(err.stack);
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
+exports.getCafeDataByJibunAddr = async function (req, res) {
+  try {
+    const { city, gu, dong } = req.query;
+    const response = await Cafe.findCafeDataByJibunAddr({ city, gu, dong });
+    const searchResult = response.data;
+    return res.status(successCode.OK).json({ data: searchResult });
+  } catch (err) {
+    logger.error(err.stack);
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
