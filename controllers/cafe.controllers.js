@@ -2,9 +2,9 @@ const axios = require('axios');
 const fs = require('fs');
 const { convertLocationData } = require('../models/util');
 const Cafe = require('../models/cafe');
-// DB 에 저장하기 위해 가공이 완료된 카페 정보 데이터
 const { successCode, errorCode } = require('../statusCode');
 const logger = require('../config/logger');
+const { Result } = require('express-validator');
 
 // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
 exports.getDataFromPublicAPI = async function (req, res, next) {
@@ -152,10 +152,10 @@ exports.getCafeDataByJibunAddr = async function (req, res) {
 // 사용자의 카페 정보 업데이트 요청
 // 업데이트 가능한 카페 정보는 이름이나 지번 주소 검색을 통해 데이터를 받아옴.
 // 입력 가능 데이터 : 대표 이미지, 전화번호, 메뉴, 영업시간 등
-exports.updateCafeData = async function (req, res) {
+exports.registerCafeInfo = async function (req, res) {
   try {
     const { data } = req.body;
-    const response = await Cafe.updateCafeData(data);
+    const response = await Cafe.registerCafeInfo(data);
     logger.info(response);
     return res.sendStatus(successCode.OK);
   } catch (err) {
@@ -180,6 +180,47 @@ exports.getCafeInfoById = async function (req, res) {
       operating_hours: responseOfOperHours.data,
     };
     return res.status(200).json({ data: cafeDetailInfo });
+  } catch (err) {
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
+// 카페 정보 업데이트
+// 변경 가능한 데이터 : 대표 이미지, 전화번호
+exports.updateCafeInfo = async function (req, res) {
+  const cafeInfo = req.body.data;
+  try {
+    const response = await Cafe.updateCafeInfo(cafeInfo);
+    return res.status(successCode.OK).json({ message: 'CAFE_INFO_UPDATED' });
+
+    // 대표 이미지 & 전화번호 수정
+  } catch (err) {
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
+// 카페 메뉴 정보 수정 요청
+exports.updateCafeMenus = async function (req, res) {
+  try {
+    const cafeInfo = req.body.data;
+    const response = await Cafe.updateMenuTbl(cafeInfo);
+    return res.status(successCode.OK).json({ message: 'CAFE_MENUS_UPDATED' });
+  } catch (err) {
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
+// 카페 운영 시간 정보 수정 요청
+exports.updateCafeOperHours = async function (req, res) {
+  try {
+    const cafeInfo = req.body.data;
+    const response = await Cafe.updateOperHoursTbl(cafeInfo);
+    return res
+      .status(successCode.OK)
+      .json({ message: 'CAFE_OPERATING_HOURS_UPDATED' });
   } catch (err) {
     return res
       .status(errorCode.INTERNALSERVERERROR)

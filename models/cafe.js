@@ -56,23 +56,22 @@ class Cafe {
   }
   // status 로 카페 데이터 조회
   // status: 사용자 등록 전(NULL), 사용자의 등록 요청('N'), 관리자 승인 완료('Y')
-  static async findCafeDataByStatus(status) {
+  static async findCafeDataByStatus(data) {
     try {
-      const query = 'select name, status from cafes where status = ?';
-      const params = [status];
+      const query = 'select name, jibun_address from cafes where status = ?';
+      const params = [data.status];
       const result = await DB('GET', query, params);
-      console.log('Search Result: ', result);
       return result;
     } catch (err) {
       logger.error(err.stack);
       throw new Error(err.message);
     }
   }
-  // 카페 ID로 카페 정보(이름, 주소, 전화번호) 불러오기
+  // 카페 ID로 카페 정보 불러오기
   static async getCafeInfoById(cafeInfo) {
     try {
       const query =
-        'select name, jibun_address, road_address, tel from cafes where id = ?';
+        'select name, jibun_address, road_address, latitude, longitude, tel, image_path from cafes where id = ?';
       const params = [cafeInfo.id];
       const result = await DB('GET', query, params);
       return result;
@@ -153,7 +152,7 @@ class Cafe {
     return resultList;
   }
   // 사용자의 카페 정보 등록 요청
-  static async updateCafeData(cafeInfo) {
+  static async registerCafeInfo(cafeInfo) {
     // 입력받을 데이터 값 : 대표 이미지, 전화번호, 메뉴 데이터, 영업 시간 데이터
     // 대표 이미지, 전화번호 칼럼 이름 : image_path, tel
     // 메뉴, 영업 시간은 카페 테이블과 cafe_id를 외래키로 하여 결합되어 있음.
@@ -188,6 +187,81 @@ class Cafe {
       operHoursTblResult = await this.updateOperHoursTbl(cafeInfo);
 
       return { cafeTblResult, menuTblResult, operHoursTblResult };
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
+  // 사용자의 카페 정보 수정 요청
+  static async updateCafeInfo(cafeInfo) {
+    try {
+      const { id, tel, image_path } = cafeInfo;
+      // 수정하고자 하는 데이터와 함께 하나의 튜플 새로 생성
+      const query =
+        'insert into cafes set name = ?, jibun_address = ?, road_address = ?, latitude = ?, longitude = ?, tel = ?, image_path = ?, status = ?';
+      let params, result;
+      const status = 'N';
+      // 대표 이미지만 수정
+      if (!tel) {
+        // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
+        const response = await this.getCafeInfoById({ id });
+        const { name, jibun_address, road_address, latitude, longitude, tel } =
+          response.data[0];
+        params = [
+          name,
+          jibun_address,
+          road_address,
+          latitude,
+          longitude,
+          tel,
+          image_path,
+          status,
+        ];
+        result = await DB('POST', query, params);
+        return result;
+      }
+      // 전화번호만 수정
+      if (!image_path) {
+        // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
+        const response = await this.getCafeInfoById({ id });
+        const {
+          name,
+          jibun_address,
+          road_address,
+          latitude,
+          longitude,
+          image_path,
+        } = response.data[0];
+        params = [
+          name,
+          jibun_address,
+          road_address,
+          latitude,
+          longitude,
+          tel,
+          image_path,
+          status,
+        ];
+        result = await DB('POST', query, params);
+        return result;
+      }
+      // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
+      // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
+      const response = await this.getCafeInfoById({ id });
+      const { name, jibun_address, road_address, latitude, longitude } =
+        response.data[0];
+      params = [
+        name,
+        jibun_address,
+        road_address,
+        latitude,
+        longitude,
+        tel,
+        image_path,
+        status,
+      ];
+      result = await DB('POST', query, params);
+      return result;
     } catch (err) {
       logger.error(err.stack);
       throw new Error(err.message);
