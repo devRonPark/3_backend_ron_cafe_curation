@@ -1,28 +1,43 @@
 const User = require('../models/user');
+const { errorCode } = require('../statusCode');
 
-// 로그인한 상태인지 체크
-exports.isAuthorized = function (req, res, next) {
-  // 현재 로그인한 상태가 아니라면,
-  if (req.session && !req.session.userid) {
-    console.log('현재 로그인한 사용자가 없음!');
-    // 상태 코드 401: Unauthorized
-    return res.status(401).json({ isLoggedIn: false });
-  } else {
-    // userid 가 있을 경우에만 다음 미들웨어 실행
-    next();
+// 로그인 여부 판단
+exports.isLoggedIn = function (req, res, next) {
+  // 로그인하지 않은 경우
+  if (!req.session.userid) {
+    return res
+      .status(errCode.UNAUTHORIZED)
+      .json({ message: 'PLEASE_LOGIN_FIRST' });
   }
+  // 현재 로그인한 상태라면
+  next();
+};
+// 로그인하지 않았는지
+exports.isNotLoggedIn = function (req, res, next) {
+  // 로그인하지 않은 경우
+  if (req.session.userid) {
+    return res.status(errCode.FORBIDDEN).json({ message: 'ALREADY_LOGGED_IN' });
+  }
+  // 현재 로그인 안 한 상태라면(로그인 페이지, 회원가입 페이지 접근 가능)
+  next();
+};
+// 접근 가능 여부 판단
+exports.hasNoPermission = function (req, res, next) {
+  // 사용자가 로그인 시
+  if (req.session.userid && req.session.role === 'user') {
+    return res.status(errCode.FORBIDDEN).json({ message: 'NO_PERMISSION' });
+  }
+  // 관리자 로그인 시
+  next();
 };
 // 로그인 안 한 상태인지 체크
-exports.isNotAuthenticated = function (req, res, next) {
-  console.log(req.session, req.session.userid);
+exports.isNotAuthorized = function (req, res, next) {
   // session 객체가 존재하지 않으면,
   if (!req.session) return res.send(err);
 
   // 현재 로그인한 상태라면,
   if (req.session && req.session.userid) {
-    console.log('현재 로그인한 사용자 존재함!');
-    // 상태 코드 403: Forbidden
-    return res.status(403).json({ isLoggedIn: true });
+    return res.sendStatus(errorCode.FORBIDDEN);
   }
   // userid 가 없을 경우에만 다음 미들웨어 실행
   next();
@@ -31,22 +46,19 @@ exports.isNotAuthenticated = function (req, res, next) {
 exports.loadUserData = function () {
   return async function (req, res, next) {
     try {
-      console.log('req.session.userid: ', req.session.userid);
       // 로그인한 사용자가 존재한다면,
       if (req.session.userid) {
         const response = await User.findById({ id: req.session.userid });
         const userInfo = response.data[0];
-        console.log('userInfo: ', userInfo);
 
         if (!userInfo) {
-          return next(new Error('제공된 이메일에 해당하는 사용자가 없습니다.'));
+          return next(new Error('User_Not_Found'));
         }
-
+        // req 객체에 userInfo 추가
         req.userInfo = userInfo;
         next();
       } else {
         // 로그인한 사용자가 존재하지 않는다면,
-        console.log('login user does not exist');
         next();
       }
     } catch (err) {
@@ -58,7 +70,7 @@ exports.loadUserData = function () {
 exports.addLogout = function () {
   return function (req, res, next) {
     req.logout = function () {
-      req.session.destroy();
+      req.session.destroy(); // 세션 삭제
     };
 
     next();
