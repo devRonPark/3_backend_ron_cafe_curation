@@ -1,4 +1,5 @@
 const { body, check, validationResult } = require('express-validator');
+const { errorCode } = require('../statusCode');
 
 exports.validateUsername = check('name')
   .exists({ checkFalsy: true })
@@ -41,6 +42,25 @@ exports.validatePhoneNumber = check('phone_number')
   .withMessage('휴대폰 번호를 반드시 입력해주시기 바랍니다.')
   .matches(/^\d{3}[-]{1}\d{4}[-]{1}\d{4}$/)
   .withMessage('휴대폰 번호는 반드시 000-0000-0000 의 형식으로 입력해주세요.');
+exports.validateComment = check('content')
+  .exists({ checkFalsy: true })
+  .withMessage('CONTENT_REQUIRED')
+  .isLength({ max: 60 })
+  .withMessage('MAXIMUM_LENGTH_EXCEED');
+exports.isCafeIdExist = function (req, res, next) {
+  if (!req.body.data.cafe_id)
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'CAFE_ID_REQUIRED' });
+  next();
+};
+exports.isUserIdExist = function (req, res, next) {
+  if (!req.body.data.user_id)
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'USER_ID_REQUIRED' });
+  next();
+};
 // 유효성 검사 이후 에러 체크
 exports.validateCallback = function (req, res, next) {
   // validate the data to be submitted
