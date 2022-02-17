@@ -90,3 +90,17 @@ exports.generateRandomPassword = () => {
 
   return randomString;
 };
+// 관리자 API 에서 어떤 데이터인지 검사하고 req.body에 tblName 값을 저장해주는 미들웨어
+exports.isWhichTblData = function (req, res, next) {
+  const { tel, image_path, menus, operating_hours } = req.body.data;
+  if (tel || image_path) {
+    req.body.tblName = 'user_edit_cafes';
+  } else if (menus) {
+    req.body.tblName = 'menus';
+  } else if (operating_hours) {
+    req.body.tblName = 'operating_hours';
+  } else {
+    return res.status(errorCode.BADREQUEST).json({ message: 'NO_DATA_EXISTS' });
+  }
+  next();
+};
