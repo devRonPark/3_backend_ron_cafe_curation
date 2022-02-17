@@ -10,7 +10,7 @@ class Cafe {
       delete cafeInfo.yCoordinate;
     });
     try {
-      const query = 'insert into cafes set ?';
+      const query = 'insert into user_no_edit_cafes set ?';
       cafeData.forEach(async cafeInfo => {
         const params = cafeInfo;
         // 카페 정보 DB에 저장
@@ -28,7 +28,7 @@ class Cafe {
       console.log('searchWord: ', searchWord);
       // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
       const query =
-        'select id, name, jibun_address from cafes where name LIKE ?';
+        'select id, name, jibun_address from user_no_edit_cafes where name LIKE ?';
       const params = `%${searchWord}%`;
       const result = await DB('GET', query, params);
       console.log('Search Result: ', result);
@@ -44,7 +44,7 @@ class Cafe {
       const { city, gu, dong } = addrObj;
       // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
       const query =
-        'select id, name, jibun_address from cafes where jibun_address LIKE ?';
+        'select id, name, jibun_address from user_no_edit_cafes where jibun_address LIKE ?';
       const params = `%${city} ${gu} ${dong}%`;
       const result = await DB('GET', query, params);
       console.log('Search Result: ', result);
@@ -58,7 +58,8 @@ class Cafe {
   // status: 사용자 등록 전(NULL), 사용자의 등록 요청('N'), 관리자 승인 완료('Y')
   static async findCafeDataByStatus(data) {
     try {
-      const query = 'select name, jibun_address from cafes where status = ?';
+      const query =
+        'select name, jibun_address from user_no_edit_cafes where status = ?';
       const params = [data.status];
       const result = await DB('GET', query, params);
       return result;
@@ -71,7 +72,7 @@ class Cafe {
   static async getCafeInfoById(cafeInfo) {
     try {
       const query =
-        'select name, jibun_address, road_address, latitude, longitude, tel, image_path from cafes where id = ?';
+        'select name, jibun_address, road_address, latitude, longitude, tel from user_no_edit_cafes where id = ?';
       const params = [cafeInfo.id];
       const result = await DB('GET', query, params);
       return result;
@@ -167,9 +168,9 @@ class Cafe {
       // 대표 이미지 없고 메뉴 데이터, 영업 시간 데이터만 있는 경우
       if (!image_path) {
         // 전화번호 업데이트
-        query = 'update cafes set tel = ?, status = ? where id = ?';
-        params = [tel, 'N', id];
-        cafeTblResult = await DB('PATCH', query, params);
+        query = 'insert user_edit_cafes set tel = ?, cafe_id = ?';
+        params = [tel, id];
+        cafeTblResult = await DB('POST', query, params);
         // 메뉴 정보 업데이트
         menuTblResult = await this.updateMenuTbl(cafeInfo);
         // 영업시간 정보 업데이트
@@ -178,9 +179,9 @@ class Cafe {
       }
       // 대표 이미지, 메뉴 데이터, 영업 시간 데이터 다 있는 경우
       cafeTblQuery =
-        'update cafes set image_path = ?, tel = ?, status = ? where cafe_id = ?';
-      cafeTblParams = [image_path, tel, 'N', id];
-      cafeTblResult = await DB('PATCH', query, params);
+        'insert user_edit_cafes set image_path = ?, tel = ?, cafe_id = ?';
+      cafeTblParams = [image_path, tel, id];
+      cafeTblResult = await DB('POST', query, params);
       // 메뉴 정보 업데이트
       menuTblResult = await this.updateMenuTbl(cafeInfo);
       // 영업시간 정보 업데이트
@@ -198,68 +199,23 @@ class Cafe {
       const { id, tel, image_path } = cafeInfo;
       // 수정하고자 하는 데이터와 함께 하나의 튜플 새로 생성
       const query =
-        'insert into cafes set name = ?, jibun_address = ?, road_address = ?, latitude = ?, longitude = ?, tel = ?, image_path = ?, status = ?';
+        'insert into user_edit_cafes set tel = ?, image_path = ?, cafe_id = ?';
       let params, result;
-      const status = 'N';
       // 대표 이미지만 수정
       if (!tel) {
-        // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
-        const response = await this.getCafeInfoById({ id });
-        const { name, jibun_address, road_address, latitude, longitude, tel } =
-          response.data[0];
-        params = [
-          name,
-          jibun_address,
-          road_address,
-          latitude,
-          longitude,
-          tel,
-          image_path,
-          status,
-        ];
+        params = [null, image_path, id];
         result = await DB('POST', query, params);
         return result;
       }
       // 전화번호만 수정
       if (!image_path) {
         // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
-        const response = await this.getCafeInfoById({ id });
-        const {
-          name,
-          jibun_address,
-          road_address,
-          latitude,
-          longitude,
-          image_path,
-        } = response.data[0];
-        params = [
-          name,
-          jibun_address,
-          road_address,
-          latitude,
-          longitude,
-          tel,
-          image_path,
-          status,
-        ];
+        params = [tel, null, id];
         result = await DB('POST', query, params);
         return result;
       }
-      // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
-      // cafe_id 로 조회하여 변경되지 않는 데이터 가져오기
-      const response = await this.getCafeInfoById({ id });
-      const { name, jibun_address, road_address, latitude, longitude } =
-        response.data[0];
-      params = [
-        name,
-        jibun_address,
-        road_address,
-        latitude,
-        longitude,
-        tel,
-        image_path,
-        status,
-      ];
+      // 전화번호, 대표 이미지 두 개 다 수정하는 경우
+      params = [tel, image_path, id];
       result = await DB('POST', query, params);
       return result;
     } catch (err) {
@@ -271,9 +227,7 @@ class Cafe {
   static async setStatusOfTbl(tblName, statusValue, id) {
     try {
       // cafes 테이블 데이터 status 'D'로 변경
-      const query = `update ${tblName} set status = ? where ${
-        tblName === 'cafes' ? 'id' : 'cafe_id'
-      } = ?`;
+      const query = `update ${tblName} set status = ? where cafe_id = ?`;
       const params = [statusValue, id];
       const result = await DB('DELETE', query, params);
       return result;
@@ -288,7 +242,7 @@ class Cafe {
       const { id } = cafeInfo;
       // cafes 테이블, menus 테이블, operating_hours 테이블 데이터 status 'D'로 변경
       let cafeTblResult, menuTblResult, operHoursTblResult;
-      cafeTblResult = await this.setStatusOfTbl('cafes', 'D', id);
+      cafeTblResult = await this.setStatusOfTbl('user_edit_cafes', 'D', id);
       menuTblResult = await this.setStatusOfTbl('menus', 'D', id);
       operHoursTblResult = await this.setStatusOfTbl(
         'operating_hours',
