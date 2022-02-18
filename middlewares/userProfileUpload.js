@@ -30,7 +30,6 @@ const uploadFile = function (req, res, next) {
           // 폼 데이터 전송 시 파일이 포함되어 있지 않은 경우
         } else {
           // 그 다음 미들웨어 무사히 동작함.
-          console.log('야:', req.body.name);
           return next();
         }
       }

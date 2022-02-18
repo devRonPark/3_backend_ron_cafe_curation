@@ -31,12 +31,14 @@ class User {
   // 이름으로 검색
   // @param user: {name: ...}
   // @return { data: [{}], state: true }
-  static findByName = async user => {
+  static findUserByName = async user => {
     try {
-      const query = 'select * from users where name = ?';
+      const query = 'select name, email from users where name = ?';
       const params = user.name;
       const result = await DB('GET', query, params);
-      return result;
+      // { name, email }
+      const userData = result.data[0];
+      return { data: userData };
     } catch (err) {
       logger.error(err.stack);
       throw new Error(err.message);
@@ -45,14 +47,17 @@ class User {
   // 이메일로 검색
   // @param user: {email: ...}
   // @return { data: [{}], state: true }
-  static findByEmail = async user => {
+  static findUserByEmail = async user => {
     try {
       const { email } = user;
-      const query = 'select name, profile_image_path from users where email=?';
-      const params = [email];
+      const query =
+        'select id, name, email, password, dropped_at from users where email=?';
+      const params = [email.trim()]; // trim(): 양끝의 공백 제거
+      // { data: [{}], state: true }
       const result = await DB('GET', query, params);
+      // { name, email }
       const userData = result.data[0];
-      return userData;
+      return { data: userData };
     } catch (err) {
       logger.error(err.stack);
       return res.json({ message: err.message });
@@ -136,8 +141,8 @@ class User {
       const query = 'insert into users set ?';
       const params = user;
       const result = await DB('POST', query, params);
-      console.log('result : ', result);
-      return result;
+      const affectedRows = result.data.affectedRows;
+      return { affectedRows, state: result.state };
     } catch (err) {
       logger.error(err.message);
       throw new Error(err.message);

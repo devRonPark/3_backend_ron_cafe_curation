@@ -31,35 +31,35 @@ userRouter.get('/register', isNotLoggedIn, (req, res) => {
 userRouter.get('/login', isNotLoggedIn, (req, res) => {
   res.send('로그인 페이지');
 });
-// 사용자 회원가입
-userRouter.post(
-  '/register',
-  uploadFile, // 이미지 파일 서버 폴더 업로드 및 파일 경로 req 객체에 추가
-  [
-    validateUsername,
-    validateEmail,
-    validatePassword,
-    validatePasswordConfirmation,
-    validatePhoneNumber,
-    validateCallback,
-    checkEmailAlreadyExists,
-  ],
-  passwordEncryption, // 비밀번호 암호화
-  UserController.create,
-);
+// // 사용자 회원가입
+// userRouter.post(
+//   '/register',
+//   uploadFile, // 이미지 파일 서버 폴더 업로드 및 파일 경로 req 객체에 추가
+//   [
+//     validateUsername,
+//     validateEmail,
+//     validatePassword,
+//     validatePasswordConfirmation,
+//     validatePhoneNumber,
+//     validateCallback,
+//     checkEmailAlreadyExists,
+//   ],
+//   passwordEncryption, // 비밀번호 암호화
+//   UserController.create,
+// );
 // 사용자 로그인
-userRouter.post(
-  '/login',
-  [validateEmail, validateCallback], // 입력 값 유효성 검사
-  UserController.authenticate,
-  (req, res) => res.sendStatus(200),
-);
-// 사용자 로그아웃
-userRouter.get('/logout', (req, res, next) => {
-  // 로그아웃
-  req.logout();
-  res.sendStatus(200);
-});
+// userRouter.post(
+//   '/login',
+//   [validateEmail, validateCallback], // 입력 값 유효성 검사
+//   UserController.authenticate,
+//   (req, res) => res.sendStatus(200),
+// );
+// // 사용자 로그아웃
+// userRouter.get('/logout', (req, res, next) => {
+//   // 로그아웃
+//   req.logout();
+//   res.sendStatus(200);
+// });
 // 사용자 아이디 찾기
 // 1. req.body.phone_number 데이터에 접근
 // 2. req.body.phone_number 가 공란이면 에러 메세지, 형식을 지키지 않아도 에러 메세지
@@ -84,7 +84,7 @@ userRouter.post(
 );
 
 // 회원가입 시 이메일 인증
-userRouter.post('/auth/email', UserController.authEmail);
+// userRouter.post('/auth/email', UserController.authEmail);
 
 // User 회원정보 변경 (PUT /user/edit)
 // 1. 프로필 변경(프로필 이미지, 닉네임)

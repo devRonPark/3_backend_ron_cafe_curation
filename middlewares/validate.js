@@ -18,16 +18,15 @@ exports.validateEmail = check('email')
   )
   .isEmail()
   .withMessage('example@example.com 의 이메일 형식으로 입력해주세요.');
-exports.validatePassword = fieldName =>
-  check(fieldName)
-    .exists({ checkFalsy: true })
-    .withMessage('비밀번호는 반드시 입력해주시기 바랍니다.')
-    .matches(
-      /^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^*()\-_=+\\\|\[\]{};:\'",.<>\/?])*.{8,16}$/,
-    )
-    .withMessage(
-      '비밀번호는 숫자, 문자, 특수문자를 반드시 포함하여 최소 8자 이상 최대 16자 이하로 입력해주세요.',
-    );
+exports.validatePassword = check('password')
+  .exists({ checkFalsy: true })
+  .withMessage('비밀번호는 반드시 입력해주시기 바랍니다.')
+  .matches(
+    /^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^*()\-_=+\\\|\[\]{};:\'",.<>\/?])*.{8,16}$/,
+  )
+  .withMessage(
+    '비밀번호는 숫자, 문자, 특수문자를 반드시 포함하여 최소 8자 이상 최대 16자 이하로 입력해주세요.',
+  );
 exports.validatePasswordConfirmation = body('passwordConfirmation').custom(
   (value, { req }) => {
     if (!value) {
@@ -44,7 +43,7 @@ exports.validatePasswordConfirmation = body('passwordConfirmation').custom(
 exports.validatePhoneNumber = check('phone_number')
   .exists({ checkFalsy: true })
   .withMessage('휴대폰 번호를 반드시 입력해주시기 바랍니다.')
-  .matches(/^\d{3}[-]{1}\d{4}[-]{1}\d{4}$/)
+  .matches(/^\d{3}[-]{1}\d{4}[-]{1}\d{4}$/) // TODO 휴대폰 검증 형식 수정 필요
   .withMessage('휴대폰 번호는 반드시 000-0000-0000 의 형식으로 입력해주세요.');
 exports.validateComment = check('content')
   .exists({ checkFalsy: true })
@@ -78,20 +77,20 @@ exports.isCafeIdByQueryValidate = async function (req, res, next) {
     return res.status(errorCode.INTERNALSERVERERROR);
   }
 };
-// Req.query 로 전달되는 cafeId 유효성 검증
-exports.isCafeIdValidate = function (req, res, next) {
+// Req.query 로 전달되는 id 유효성 검증
+exports.isIdInQueryValidate = function (req, res, next) {
   try {
-    const { cafeId } = req.query;
-    // cafeId 입력되었는지 검증
-    if (!cafeId)
+    const { id } = req.query;
+    // id 입력되었는지 검증
+    if (!id)
       return res
         .status(errorCode.BADREQUEST)
-        .json({ message: 'CAFE_ID_REQUIRED' });
-    // params로 전달된 id 형식 검증
-    if (isNaN(parseInt(cafeId, 10)))
+        .json({ message: 'ID_IN_QUERY_REQUIRED' });
+    // query로 전달된 id 형식 검증
+    if (isNaN(parseInt(id, 10)))
       return res
         .status(errorCode.BADREQUEST)
-        .json({ message: 'NUMBER_TYPE_REQUIRED' });
+        .json({ message: 'ID_IN_QUERY_NUMBER_TYPE_REQUIRED' });
     next();
   } catch (err) {
     logger.error(err.stack);
@@ -212,4 +211,9 @@ exports.isStarsDataValidate = function (req, res, next) {
       .status(errorCode.BADREQUEST)
       .json({ message: 'NUMBER_TYPE_REQUIRED' });
   next();
+};
+exports.isEmail = function (emailVal) {
+  const emailRegex =
+    /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i;
+  return emailRegex.test(emailVal);
 };
