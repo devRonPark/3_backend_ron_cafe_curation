@@ -3,6 +3,7 @@ const { errorCode } = require('../statusCode');
 const Cafe = require('../models/cafe');
 const Comment = require('../models/comment');
 const logger = require('../config/logger');
+const res = require('express/lib/response');
 
 exports.validateUsername = check('name')
   .exists({ checkFalsy: true })
@@ -51,8 +52,9 @@ exports.validateComment = check('content')
   .isLength({ max: 60 })
   .withMessage('MAXIMUM_LENGTH_EXCEED');
 // Req.query 로 전달되는 cafeId 유효성 검증
-exports.isCafeIdValidate = async function (req, res, next) {
+exports.isCafeIdByQueryValidate = async function (req, res, next) {
   try {
+    // const cafeId = req.query.cafeId || req.params.id;
     const { cafeId } = req.query;
     // cafeId 입력되었는지 검증
     if (!cafeId)
@@ -76,22 +78,47 @@ exports.isCafeIdValidate = async function (req, res, next) {
     return res.status(errorCode.INTERNALSERVERERROR);
   }
 };
-// Req.params 로 전달되는 commentId 유효성 검증
-exports.isCommentIdValidate = async function (req, res, next) {
+// Req.query 로 전달되는 cafeId 유효성 검증
+exports.isCafeIdValidate = function (req, res, next) {
   try {
-    const { id } = req.params;
-    // commentId 입력되었는지 검증
-    if (!id)
+    const { cafeId } = req.query;
+    // cafeId 입력되었는지 검증
+    if (!cafeId)
       return res
         .status(errorCode.BADREQUEST)
-        .json({ message: 'COMMENT_ID_REQUIRED' });
+        .json({ message: 'CAFE_ID_REQUIRED' });
     // params로 전달된 id 형식 검증
-    if (isNaN(parseInt(id, 10)))
+    if (isNaN(parseInt(cafeId, 10)))
       return res
         .status(errorCode.BADREQUEST)
         .json({ message: 'NUMBER_TYPE_REQUIRED' });
+    next();
+  } catch (err) {
+    logger.error(err.stack);
+    return res.status(errorCode.INTERNALSERVERERROR);
+  }
+};
+// 실제로 존재하는 카페 정보인지 검증
+exports.isCafeInfoExistById = async function (req, res, next) {
+  try {
+    const cafeId = req.params.id;
+    const result = await Cafe.isCafeInfoExist({ cafeId });
+    // 실제로 존재하는 카페 정보인지 검증
+    if (!result)
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'CAFE_NOT_FOUND' });
+    next();
+  } catch (err) {
+    logger.error(err.stack);
+    return res.status(errorCode.INTERNALSERVERERROR);
+  }
+};
+// 실제로 존재하는 댓글 정보인지 검증
+exports.isCommentInfoExistById = async function (req, res, next) {
+  try {
+    const id = req.params.id;
     const result = await Comment.isCommentInfoExist({ id });
-    // 실제로 존재하는 댓글 정보인지 검증
     if (!result)
       return res
         .status(errorCode.BADREQUEST)
@@ -125,7 +152,6 @@ exports.isIdParamValidate = function (req, res, next) {
     return res
       .status(errorCode.BADREQUEST)
       .json({ message: 'ID_PARAMETER_REQUIRED' });
-  console.log('id type: ', typeof +id);
   // params로 전달된 id 형식 검증
   // id가 NaN이면 true
   if (isNaN(parseInt(id, 10)))
@@ -148,4 +174,42 @@ exports.validateCallback = function (req, res, next) {
   } else {
     next();
   }
+};
+// 평점 데이터 유효성 검증
+exports.isStarsDataValidate = function (req, res, next) {
+  const {
+    stars_about_talk,
+    stars_about_book,
+    stars_about_work,
+    stars_about_coffee,
+  } = req.body;
+  console.log(
+    stars_about_talk,
+    stars_about_book,
+    stars_about_work,
+    stars_about_coffee,
+  );
+  // 총 4개의 평점 데이터가 존재하는지 검증
+  if (
+    !(
+      stars_about_talk &&
+      stars_about_book &&
+      stars_about_work &&
+      stars_about_coffee
+    )
+  )
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'STARS_OF_4_REQUIRED' });
+  // 평점 데이터 타입이 숫자인지 검증
+  if (
+    isNaN(parseInt(stars_about_talk, 10)) ||
+    isNaN(parseInt(stars_about_book, 10)) ||
+    isNaN(parseInt(stars_about_work, 10)) ||
+    isNaN(parseInt(stars_about_coffee, 10))
+  )
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'NUMBER_TYPE_REQUIRED' });
+  next();
 };
