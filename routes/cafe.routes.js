@@ -1,5 +1,6 @@
 const express = require('express');
 const CafeController = require('../controllers/cafe.controllers');
+
 const cafeRouter = express.Router();
 // 공공 API에 요청을 보내 서울시 내 카페 데이터 받아오기
 // cafeRouter.get('/', CafeController.getDataFromPublicAPI);
@@ -21,9 +22,13 @@ cafeRouter.get('/search', (req, res) => {
   }
 });
 // 이미 클라이언트에서 이름 혹은 지번 주소로 GET 요청(검색)을 통해 응답받은 데이터를 전달해준다.
+// 카페 정보 등록 요청 API
 cafeRouter.patch('/', CafeController.registerCafeInfo);
+// 카페 정보(휴대폰 번호, 이미지) 수정 요청 API
 cafeRouter.patch('/:id/edit/cafeInfo', CafeController.updateCafeInfo);
+// 메뉴 정보 수정 요청 API
 cafeRouter.patch('/:id/edit/menus', CafeController.updateCafeMenus);
+// 운영시간 정보 수정 요청 API
 cafeRouter.patch(
   '/:id/edit/operating-hours',
   CafeController.updateCafeOperHours,

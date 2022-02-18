@@ -3,8 +3,10 @@ const DB = require('../config/mysql');
 const { printCurrentTime } = require('./util');
 
 class Auth {
+  // 생성된 토큰 저장
+  // @param token: {token_value: ..., time_to_live: ..., user_id: ...}
+  // @return { state: true }
   static saveToken = async data => {
-    // 생성된 토큰 저장
     try {
       const timestamp = printCurrentTime();
       data['created_at'] = timestamp;
@@ -18,6 +20,8 @@ class Auth {
     }
   };
   // 토큰 값으로 유효한 토큰 가져오기
+  // @param token: {token_value: ...}
+  // @return { data: [{}]state: true }
   static getTokenByValue = async data => {
     try {
       const query = 'select * from auth where token_value=?';

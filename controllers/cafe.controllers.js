@@ -4,8 +4,6 @@ const { convertLocationData } = require('../models/util');
 const Cafe = require('../models/cafe');
 const { successCode, errorCode } = require('../statusCode');
 const logger = require('../config/logger');
-const { Result } = require('express-validator');
-const res = require('express/lib/response');
 
 // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
 exports.getDataFromPublicAPI = async function (req, res, next) {
@@ -135,7 +133,7 @@ exports.getCafeDataByName = async function (req, res) {
       .json({ message: err.message });
   }
 };
-// 전체 리소스에 대한 검색 요청
+// 전체 리소스에 대한 검색 요청(검색 API에서 사용됨)
 // /search?city=서울특별시&gu=()&dong=() : 지번 주소에서 서울 특별시 구, 동 정보를 포함하고 있는 모든 리소스 조회
 exports.getCafeDataByJibunAddr = async function (req, res) {
   try {
@@ -232,11 +230,13 @@ exports.updateCafeOperHours = async function (req, res) {
       .json({ message: err.message });
   }
 };
-// cafe_id 와 일치하는 모든 데이터(카페 정보, 메뉴, 영업시간) 삭제 요청
+// cafe_id, user_id 와 일치하는 모든 데이터(카페 정보, 메뉴, 영업시간) 삭제 요청
+// 직접 그 정보를 등록한 사용자만이 정보를 삭제할 수 있다.
 exports.deleteCafeInfo = async function (req, res) {
   try {
-    const cafeInfo = { id: req.params.id };
-    const response = await Cafe.deleteCafeInfo(cafeInfo);
+    const data = { cafe_id: req.params.id, user_id: req.body.user_id };
+    const response = await Cafe.deleteCafeInfo(data);
+    // TODO: 테이블 status 업데이트 중 조건에 맞는 데이터가 존재하지 않는 경우 예외 처리해주기
     return res
       .status(successCode.OK)
       .json({ message: 'DELETE_REQUEST_SUCCESS' });
