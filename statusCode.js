@@ -1,13 +1,14 @@
-export const successCode = {
+exports.successCode = {
   OK: 200,
   CREATED: 201,
   ACCEPTED: 202,
   NOCONTENT: 204,
 };
-export const errorCode = {
+exports.errorCode = {
   BADREQUEST: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOTFOUND: 404,
   CONFLICT: 409,
+  INTERNALSERVERERROR: 500,
 };
