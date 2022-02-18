@@ -54,8 +54,8 @@ exports.isRegisteredOrNot = async function (req, res) {
     const { id } = req.params;
     const { tblName, data } = req.body;
     // register: 관리자의 등록 승인 여부, created_at: 등록 요청 데이터의 식별자 역할
-    const { register, user_id, created_at } = data;
-    if (register) {
+    const { isRegister, user_id, created_at } = data;
+    if (isRegister) {
       // set status to 'RA'
       // menus 테이블의 데이터 status 를 'RA'로
       // 클라이언트로부터 전달받은 데이터를 menus 테이블에서 조회할 때 어떤 기준으로 빠르게 찾아낼 수 있을까?
@@ -63,10 +63,10 @@ exports.isRegisteredOrNot = async function (req, res) {
       // operating_hours 테이블의 데이터 status 를 'RA'로
       // operating_hours 테이블에도 user_id 칼럼 추가
       const data = { user_id, cafe_id: id, created_at, tblName };
-      const response = await Admin.approveUserRequest(data);
+      const response = await Admin.approveRegisterRequest(data);
       return res.status(successCode.OK).json({ message: 'REGISTER_APPROVED' });
     }
-    return res.status(successCode).json({ message: 'REGISTER_REJECTED' });
+    return res.status(successCode.OK).json({ message: 'REGISTER_REJECTED' });
   } catch (err) {
     logger.error(err.stack);
     return res
@@ -74,16 +74,41 @@ exports.isRegisteredOrNot = async function (req, res) {
       .json({ message: err.message });
   }
 };
-// 관리자가 정보 등록, 수정 승인 여부 결정
-// exports.isDeletedOrNot = async function (req, res) {
-//   try {
-//     const { id } = req.params;
-//     // register: 관리자의 등록 승인 여부, created_at: 등록 요청 데이터의 식별자 역할
-//     const { register, user_id, created_at } = data;
-//   } catch (err) {
-//     logger.error(err.stack);
-//     return res
-//       .status(errorCode.INTERNALSERVERERROR)
-//       .json({ message: err.message });
-//   }
-// };
+// 관리자가 정보 삭제 승인 여부 결정
+exports.isDeletedOrNot = async function (req, res) {
+  try {
+    const { id } = req.params;
+    // isDelete: 관리자의 삭제 승인 여부, created_at: 삭제 요청 데이터의 식별자 역할
+    const { isDelete, user_id, created_at } = req.body.data;
+    // 관리자로부터 삭제 승인을 받았다면,
+    if (isDelete) {
+      const data = { user_id, cafe_id: id, created_at };
+      // user_edit_cafes, menus, operating_hours 테이블 데이터의 status 를 'DA'로 변경
+      let cafeTblResult, menuTblResult, operHoursTblResult;
+      cafeTblResult = await Cafe.setStatusOfTbl(
+        'user_edit_cafes',
+        user_id,
+        cafe_id,
+        'DR',
+        'DA',
+      );
+      menuTblResult = await Cafe.setStatusOfTbl('menus', 'DR', 'DA', cafe_id);
+      operHoursTblResult = await Cafe.setStatusOfTbl(
+        'operating_hours',
+        user_id,
+        cafe_id,
+        'DR',
+        'DA',
+      );
+      return { cafeTblResult, menuTblResult, operHoursTblResult };
+      return res.status(successCode.OK).json({ message: 'DELETE_APPROVED' });
+    }
+    // 관리자로부터 삭제 반려를 받았다면
+    return res.status(successCode.OK).json({ message: 'DELETE_REJECTED' });
+  } catch (err) {
+    logger.error(err.stack);
+    return res
+      .status(errorCode.INTERNALSERVERERROR)
+      .json({ message: err.message });
+  }
+};
