@@ -35,16 +35,16 @@ adminRouter.post(
   AdminController.isRegisteredOrNot,
 );
 // 사용자가 등록 및 수정 요청한 메뉴 정보 승인 여부 결정
-cafeRouter.post(
+adminRouter.post(
   '/cafes/:id/register/menus',
   isWhichTblData,
   AdminController.isRegisteredOrNot,
 );
 // 사용자가 등록 및 수정 요청한 운영시간 정보 승인 여부 결정
-cafeRouter.post(
+adminRouter.post(
   '/cafes/:id/register/operating-hours',
   isWhichTblData,
   AdminController.isRegisteredOrNot,
 );
-// cafeRouter.delete('/cafes/:id/delete', AdminController.deleteCafeInfo);
+adminRouter.delete('/cafes/:id/delete', AdminController.isDeletedOrNot);
 module.exports = adminRouter;
