@@ -4,7 +4,7 @@ const DB = require('../config/mysql');
 
 class Admin {
   // 카페 정보 등록, 수정 요청 승인
-  static approveUserRequest(data) {
+  static async approveRegisterRequest(data) {
     try {
       const { user_id, cafe_id, created_at, tblName } = data;
       // tblName 에 따라 접근 테이블 달라지며, status를 'Y'로 변경
