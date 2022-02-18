@@ -71,6 +71,19 @@ class Cafe {
       throw new Error(err.message);
     }
   }
+  // cafe_id 로 실제로 존재하는 카페 정보인지 판단
+  static async isCafeInfoExist(data) {
+    try {
+      const query = 'select id, name from user_no_edit_cafes where id = ?';
+      const params = [data.cafeId];
+      const result = await DB('GET', query, params);
+      const cafeData = result.data[0];
+      return cafeData;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
   // 관리자에서 카페 ID로 카페 정보 불러오기
   static async getCafeInfoById(data) {
     try {
@@ -231,11 +244,16 @@ class Cafe {
     }
   }
   // 테이블에서 cafe_id 와 일치하는 튜플의 status 값 변경
-  static async setStatusOfTbl(tblName, statusValue, cafe_id) {
+  static async setStatusOfTbl(
+    tblName,
+    user_id,
+    cafe_id,
+    currentStatusValue,
+    newStatusValue,
+  ) {
     try {
-      // cafes 테이블 데이터 status 'D'로 변경
-      const query = `update ${tblName} set status = ? where cafe_id = ?, status = RA`;
-      const params = [statusValue, cafe_id];
+      const query = `update ${tblName} set status = ? where user_id = ?, cafe_id = ?, status = ?`;
+      const params = [newStatusValue, user_id, cafe_id, currentStatusValue];
       const result = await DB('DELETE', query, params);
       return result;
     } catch (err) {
@@ -246,19 +264,29 @@ class Cafe {
   // id에 해당하는 카페 정보 삭제 요청
   static async deleteCafeInfo(data) {
     try {
-      const { cafe_id } = data;
-      // cafes 테이블, menus 테이블, operating_hours 테이블 데이터 status 'D'로 변경
+      const { user_id, cafe_id } = data;
+      // cafes 테이블, menus 테이블, operating_hours 테이블 데이터 status 'DR'로 변경
       let cafeTblResult, menuTblResult, operHoursTblResult;
       cafeTblResult = await this.setStatusOfTbl(
         'user_edit_cafes',
-        'DR',
+        user_id,
         cafe_id,
+        'RA',
+        'DR',
       );
-      menuTblResult = await this.setStatusOfTbl('menus', 'DR', cafe_id);
+      menuTblResult = await this.setStatusOfTbl(
+        'menus',
+        user_id,
+        cafe_id,
+        'RA',
+        'DR',
+      );
       operHoursTblResult = await this.setStatusOfTbl(
         'operating_hours',
-        'DR',
+        user_id,
         cafe_id,
+        'RA',
+        'DR',
       );
       return { cafeTblResult, menuTblResult, operHoursTblResult };
     } catch (err) {
