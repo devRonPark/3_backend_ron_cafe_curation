@@ -47,14 +47,30 @@ class User {
   // @return { data: [{}], state: true }
   static findByEmail = async user => {
     try {
-      const query = 'select * from users where email=?';
-      const params = user.email;
+      const { email } = user;
+      const query = 'select name, profile_image_path from users where email=?';
+      const params = [email];
       const result = await DB('GET', query, params);
-      console.log('result: ', result);
-      return result;
+      const userData = result.data[0];
+      return userData;
     } catch (err) {
       logger.error(err.stack);
       return res.json({ message: err.message });
+    }
+  };
+  // 사용자 인덱스 값으로 검색
+  // @param user: {id: ...}
+  // @return { name, profile_image_path }
+  static findById = async user => {
+    try {
+      const query = 'select name, profile_image_path from users where id = ?';
+      const params = [user.id];
+      const result = await DB('GET', query, params);
+      const userData = result.data[0];
+      return userData;
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
     }
   };
   // 비밀번호 일치 여부 검사
@@ -65,21 +81,6 @@ class User {
     try {
       // plainPassword 를 암호화해서 데이터베이스에 있는 암호화된 비밀번호와 같은지 체크
       return await bcrypt.compare(plainPassword, passwordInDb);
-    } catch (err) {
-      logger.error(err.stack);
-      throw new Error(err.message);
-    }
-  };
-  // 사용자 인덱스 값으로 검색
-  // @param user: {id: ...}
-  // @return { data: [{}], state: true }
-  static findById = async user => {
-    try {
-      const query = 'select * from users where id = ?';
-      const params = [user.id];
-      const result = await DB('GET', query, params);
-      // console.log('result: ', result);
-      return result;
     } catch (err) {
       logger.error(err.stack);
       throw new Error(err.message);
