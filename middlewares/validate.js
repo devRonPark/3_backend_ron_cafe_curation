@@ -1,5 +1,8 @@
 const { body, check, validationResult } = require('express-validator');
 const { errorCode } = require('../statusCode');
+const Cafe = require('../models/cafe');
+const Comment = require('../models/comment');
+const logger = require('../config/logger');
 
 exports.validateUsername = check('name')
   .exists({ checkFalsy: true })
@@ -47,18 +50,88 @@ exports.validateComment = check('content')
   .withMessage('CONTENT_REQUIRED')
   .isLength({ max: 60 })
   .withMessage('MAXIMUM_LENGTH_EXCEED');
-exports.isCafeIdExist = function (req, res, next) {
-  if (!req.body.data.cafe_id)
-    return res
-      .status(errorCode.BADREQUEST)
-      .json({ message: 'CAFE_ID_REQUIRED' });
-  next();
+// Req.query 로 전달되는 cafeId 유효성 검증
+exports.isCafeIdValidate = async function (req, res, next) {
+  try {
+    const { cafeId } = req.query;
+    // cafeId 입력되었는지 검증
+    if (!cafeId)
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'CAFE_ID_REQUIRED' });
+    // params로 전달된 id 형식 검증
+    if (isNaN(parseInt(cafeId, 10)))
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'NUMBER_TYPE_REQUIRED' });
+    const result = await Cafe.isCafeInfoExist({ cafeId });
+    // 실제로 존재하는 카페 정보인지 검증
+    if (!result)
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'CAFE_NOT_FOUND' });
+    next();
+  } catch (err) {
+    logger.error(err.stack);
+    return res.status(errorCode.INTERNALSERVERERROR);
+  }
 };
-exports.isUserIdExist = function (req, res, next) {
-  if (!req.body.data.user_id)
+// Req.params 로 전달되는 commentId 유효성 검증
+exports.isCommentIdValidate = async function (req, res) {
+  try {
+    const { id } = req.params;
+    // commentId 입력되었는지 검증
+    if (!id)
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'COMMENT_ID_REQUIRED' });
+    // params로 전달된 id 형식 검증
+    if (isNaN(parseInt(id, 10)))
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'NUMBER_TYPE_REQUIRED' });
+    const result = await Comment.isCommentInfoExist({ id });
+    // 실제로 존재하는 댓글 정보인지 검증
+    if (!result)
+      return res
+        .status(errorCode.BADREQUEST)
+        .json({ message: 'COMMENT_NOT_FOUND' });
+    next();
+  } catch (err) {
+    logger.error(err.stack);
+    return res.status(errorCode.INTERNALSERVERERROR);
+  }
+};
+// Req.body 로 전달되는 user_id 유효성 검증
+exports.isUserIdValidate = function (req, res, next) {
+  const { user_id } = req.body;
+  // user_id 존재하는지 여부
+  if (!user_id)
     return res
       .status(errorCode.BADREQUEST)
       .json({ message: 'USER_ID_REQUIRED' });
+  // user_id 형식 검증
+  if (isNaN(parseInt(user_id, 10)))
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'NUMBER_TYPE_REQUIRED' });
+  next();
+};
+// URL의 ID Parameter 유효성 검증
+exports.isIdParamValidate = function (req, res, next) {
+  const id = req.params.id;
+  // param 존재하는지 여부
+  if (!id)
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'ID_PARAMETER_REQUIRED' });
+  console.log('id type: ', typeof +id);
+  // params로 전달된 id 형식 검증
+  // id가 NaN이면 true
+  if (isNaN(parseInt(id, 10)))
+    return res
+      .status(errorCode.BADREQUEST)
+      .json({ message: 'NUMBER_TYPE_REQUIRED' });
   next();
 };
 // 유효성 검사 이후 에러 체크
