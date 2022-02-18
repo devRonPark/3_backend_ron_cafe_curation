@@ -7,35 +7,49 @@ const {
   isCafeIdValidate,
   isUserIdValidate,
   isIdParamValidate,
-  isCommentIdValidate,
+  isCafeInfoExistById,
+  isCommentInfoExistById,
 } = require('../middlewares/validate');
 // 모든 사용자 한줄평 조회
 commentRouter.get('/', CommentController.getAllComments);
 // 카페 별 사용자 한줄평 조회
+// /comments?cafeId=cafeId
 commentRouter.get(
   '/:id',
-  isIdParamValidate,
+  isCafeIdValidate,
+  isCafeInfoExistById,
   CommentController.getCommentsOfCafe,
 );
 // 사용자 한줄평 작성
 // /comments?cafeId=cafeId
 commentRouter.post(
   '/',
-  [isCafeIdValidate, isUserIdValidate, validateComment, validateCallback],
+  [
+    isCafeIdValidate,
+    isCafeInfoExistById,
+    isUserIdValidate,
+    validateComment,
+    validateCallback,
+  ],
   CommentController.createComment,
 );
 // 사용자 한줄평 수정
 // /comments/3
 commentRouter.put(
   '/:id',
-  [isCommentIdValidate, validateComment, validateCallback],
+  [
+    isIdParamValidate,
+    isCommentInfoExistById,
+    validateComment,
+    validateCallback,
+  ],
   CommentController.editComment,
 );
 // 사용자 한줄평 삭제
 // /comments/3
 commentRouter.delete(
   '/:id',
-  isCommentIdValidate,
+  [isIdParamValidate, isCommentInfoExistById],
   CommentController.deleteComment,
 );
 module.exports = commentRouter;
