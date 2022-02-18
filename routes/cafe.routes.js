@@ -67,7 +67,7 @@ cafeRouter.get('/:id/stars', [isCafeIdValidate, isCafeInfoExistById]);
 // { "user_id": 24,star_about_talk": 3, "star_about_book": 5, "star_about_work": 4, "star_about_coffee": 4 }
 // ✔ 1. req.params.id 유효성 검증(id 값 존재 여부, 숫자 형식 여부, id 에 해당하는 카페 정보 존재 여부)
 // ✔ 2. req.body 데이터 유효성 검증(4개의 값 존재 여부, 숫자 형식 여부)
-// 3. DB에 차례로 값 등록(INSERT 쿼리)
+// ✔ 3. DB에 차례로 값 등록(INSERT 쿼리)
 cafeRouter.post(
   '/:id/stars',
   [
@@ -80,11 +80,16 @@ cafeRouter.post(
 );
 // 그 카페에 대한 평점 수정하기
 // PUT /cafes/:id/stars?userId=userId
-cafeRouter.put('/:id/stars', [
-  isIdParamValidate,
-  isCafeInfoExistById,
-  isStarsDataValidate,
-]);
+// req.body 데이터
+// { "user_id": 24,star_about_talk": 3, "star_about_book": 5, "star_about_work": 4, "star_about_coffee": 4 }
+// ✔ 1. req.params.id 유효성 검증(id 값 존재 여부, 숫자 형식 여부, id 에 해당하는 카페 정보 존재 여부)
+// ✔ 2. req.body 데이터 유효성 검증(4개의 값 존재 여부, 숫자 형식 여부)
+// 3. DB에 차례로 값 등록(UPDATE 쿼리)
+cafeRouter.put(
+  '/:id/stars',
+  [isIdParamValidate, isCafeInfoExistById, isStarsDataValidate],
+  StarsController.editStars,
+);
 // 그 카페에 대한 평점 삭제하기
 // DELETE /cafes/:id/stars?userId=userId
 cafeRouter.delete('/:id/stars', [isIdParamValidate, isCafeInfoExistById]);

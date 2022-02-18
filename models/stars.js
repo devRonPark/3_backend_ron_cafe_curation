@@ -50,6 +50,44 @@ class Stars {
       throw new Error(err.message);
     }
   }
+  static async updateStars(data) {
+    try {
+      const {
+        user_id,
+        cafe_id,
+        stars_about_talk,
+        stars_about_book,
+        stars_about_work,
+        stars_about_coffee,
+        edited_at,
+      } = data;
+      // 평점 데이터 4개 동시에 추가
+      const query = `update stars
+        set value = case when name = 'stars_about_talk' then ?
+          when name = 'stars_about_book' then ?
+          when name = 'stars_about_work' then ?
+          when name = 'stars_about_coffee' then ?
+        end
+        ,edited_at = ?
+        where user_id = ? and cafe_id = ?`;
+      const params = [
+        stars_about_talk,
+        stars_about_book,
+        stars_about_work,
+        stars_about_coffee,
+        edited_at,
+        user_id,
+        cafe_id,
+      ];
+      // {data: {affectedRows, changedRows, ...}, state: true}
+      const result = await DB('PUT', query, params);
+      const affectedRows = result.data.affectedRows;
+      return { affectedRows, state: result.state };
+    } catch (err) {
+      logger.error(err.stack);
+      throw new Error(err.message);
+    }
+  }
 }
 
 module.exports = Stars;
