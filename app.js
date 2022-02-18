@@ -5,6 +5,7 @@ require('dotenv').config();
 const sessionStore = require('./config/sessionStore');
 const userRouter = require('./routes/user.routes');
 const cafeRouter = require('./routes/cafe.routes');
+const commentRouter = require('./routes/comment.routes');
 const { loadUserData, addLogout } = require('./middlewares/middlewares');
 
 // express 인스턴스 생성
@@ -13,6 +14,7 @@ const app = express();
 // 로거 출력용 logger, morgan
 global.logger || (global.logger = require('./config/logger')); // 전역에서 사용
 const morganMiddleware = require('./config/morganMiddleware');
+const adminRouter = require('./routes/admin.routes');
 app.use(morganMiddleware); // 콘솔창에 통신결과 나오게 해주는 미들웨어
 
 // 미들웨어 등록 시작, 아래 미들웨어들은 내부적으로 next() 가 실행됨.
@@ -38,6 +40,8 @@ app.get('/', (req, res) => {
 app.use('/user', userRouter);
 // 카페 정보 등록, 수정, 삭제할 수 있는 라우터 추가
 app.use('/cafes', cafeRouter);
+app.use('/admin', adminRouter);
+app.use('/comments', commentRouter);
 app.get('/debug', (req, res) => {
   console.log(req.session.userid);
   if (!req.session.userid) {
