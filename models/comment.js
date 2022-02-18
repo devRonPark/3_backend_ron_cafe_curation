@@ -81,7 +81,7 @@ class Comment {
     try {
       // comment_id와 값이 일치하고 deleted_at 이 null인 데이터 조회
       const query =
-        'select id, content from comments where id = ? and deleted_at = null';
+        'select id, content from comments where id = ? and deleted_at is NULL';
       const params = [data.id];
       // {"data": [{}], "state": true}
       const result = await DB('GET', query, params);

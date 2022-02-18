@@ -77,7 +77,7 @@ exports.isCafeIdValidate = async function (req, res, next) {
   }
 };
 // Req.params 로 전달되는 commentId 유효성 검증
-exports.isCommentIdValidate = async function (req, res) {
+exports.isCommentIdValidate = async function (req, res, next) {
   try {
     const { id } = req.params;
     // commentId 입력되었는지 검증
