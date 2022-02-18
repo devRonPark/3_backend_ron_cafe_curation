@@ -15,10 +15,7 @@ const { uploadFile } = require('../middlewares/userProfileUpload');
 const {
   checkEmailAlreadyExists,
 } = require('../middlewares/checkEmailAlreadyExists');
-const {
-  isAuthorized,
-  isNotAuthenticated,
-} = require('../middlewares/middlewares');
+const { isLoggedIn, isNotLoggedIn } = require('../middlewares/middlewares');
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const logger = require('../config/logger');
@@ -27,11 +24,11 @@ const Auth = require('../models/auth');
 // 사용자 정보 조회
 userRouter.get('/', UserController.findAll);
 // 사용자 회원가입 페이지 접근
-userRouter.get('/register', isNotAuthenticated, (req, res) => {
+userRouter.get('/register', isNotLoggedIn, (req, res) => {
   res.send('회원가입 페이지');
 });
 // 사용자 로그인 페이지 접근
-userRouter.get('/login', isNotAuthenticated, (req, res) => {
+userRouter.get('/login', isNotLoggedIn, (req, res) => {
   res.send('로그인 페이지');
 });
 // 사용자 회원가입
@@ -97,7 +94,7 @@ userRouter.post('/auth/email', UserController.authEmail);
 //   - req.session.userid 를 기준으로 데이터베이스 업데이트
 userRouter.put(
   '/edit/profile',
-  isAuthorized,
+  isLoggedIn,
   uploadFile,
   [validateUsername, validateCallback], // 입력 값 유효성 검사
   UserController.updateProfileInfo,
@@ -109,7 +106,7 @@ userRouter.put(
 //   - req.session.userid 를 기준으로 데이터베이스 업데이트
 userRouter.put(
   '/edit/phone_number',
-  isAuthorized,
+  isLoggedIn,
   [validatePhoneNumber, validateCallback],
   UserController.updatePhoneNumber,
 );
@@ -124,7 +121,7 @@ userRouter.put(
 // -> 비밀번호 초기화 이메일 발송 API
 userRouter.post(
   '/edit/password',
-  isAuthorized,
+  isLoggedIn,
   UserController.sendPasswordInitMail,
 );
 // -> 현재 비밀번호, 새로 변경할 비밀번호 입력 후 업데이트 요청
@@ -142,7 +139,7 @@ userRouter.post(
     try {
       const tokenInDb = await Auth.getTokenByValue({ token_value: token });
       const tokenInfo = tokenInDb.data[0];
-      const isTokenExist = tokenInfo || false;
+      const isTokenExist = tokenInfo ?? false;
       // 비밀번호 변경 메일 발송 시 발급된 토큰 값이 존재하면,
       if (isTokenExist) {
         // 마지막 handler 에서 user_id 접근 가능하도록 req에 저장.
@@ -191,7 +188,7 @@ userRouter.post(
 // 회원 탈퇴
 //   - req.session.userid 가 존재하는 경우에만 동작함.
 // 탈퇴 요청 들어올 시 회원 상태를 비활성화로 변경시켜준다.
-userRouter.delete('/delete', isAuthorized, async (req, res) => {
+userRouter.delete('/delete', isLoggedIn, async (req, res) => {
   try {
     const response = await User.disable(req.session.userid);
     if (response.state) {
