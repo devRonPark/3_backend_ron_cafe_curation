@@ -13,20 +13,15 @@ const DB = async (type, sql, params) => {
     // connection 생성
     const connection = await pool.getConnection(async conn => conn);
     try {
-      let executedSql;
+      // 콘솔에 출력할 sql문 생성
+      const executedSql = parms ? mysql.format(sql, params) : mysql.format(sql);
+      printSqlLog(executedSql); // 현재 실행되는 sql문 콘솔에 출력
       let rows;
       if (params) {
-        // 콘솔에 출력할 sql문 생성
-        executedSql = mysql.format(sql, params);
         [rows] = await connection.query(sql, params);
-        console.log('results: ', rows);
       } else {
-        // 콘솔에 출력할 sql문 생성
-        executedSql = mysql.format(sql);
         [rows] = await connection.query(sql);
-        console.log('results: ', rows);
       }
-      printSqlLog(executedSql); // 현재 실행되는 sql문 콘솔에 출력
 
       result.data = rows; // 조회되는 데이터 추가
       result.state = true;
