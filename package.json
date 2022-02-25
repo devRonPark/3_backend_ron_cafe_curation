@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node ./bin/www.js"
+    "start": "node src/bin/www.js",
+    "start:dev": "nodemon --watch src/ src/bin/www.js"
   },
   "keywords": [],
   "author": "",
@@ -15,9 +16,12 @@
     "colors": "^1.4.0",
     "crypto": "^1.0.1",
     "express": "^4.17.2",
+    "express-async-errors": "^3.1.1",
     "express-mysql-session": "^2.1.7",
     "express-session": "^1.17.2",
     "express-validator": "^6.14.0",
+    "http-status-codes": "^2.2.0",
+    "ipaddr.js": "^2.0.1",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.34",
     "morgan": "^1.10.0",
