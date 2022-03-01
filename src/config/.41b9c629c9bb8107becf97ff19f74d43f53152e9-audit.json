@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": false,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\User\\Documents\\3기_풀스택 교육_AdapterZ_\\3_backend_ron_cafe_curation\\config\\.41b9c629c9bb8107becf97ff19f74d43f53152e9-audit.json",
+    "files": [
+        {
+            "date": 1644303524723,
+            "name": "C:\\Users\\User\\Documents\\3기_풀스택 교육_AdapterZ_\\3_backend_ron_cafe_curation\\config\\2022-02-08.log",
+            "hash": "792f5947bd8497c00fbfa940888c33f1"
+        }
+    ],
+    "hashType": "md5"
+}

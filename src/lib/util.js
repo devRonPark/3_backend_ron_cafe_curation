@@ -1,0 +1,129 @@
+const { errorCode } = require('../lib/statusCodes/statusCode');
+const ClientError = require('../lib/errors/client.error.js');
+const UnauthorizedError = require('../lib/errors/unauthorized.error');
+const mysql = require('mysql2/promise');
+// 콘솔 창의 텍스트 색깔 변경
+const colors = require('colors');
+// 콘솔 창에 현재 날짜 및 시간 출력
+const moment = require('moment');
+// 랜덤한 토큰을 생성하기 위해 사용
+const crypto = require('crypto');
+// 카페의 위치 데이터 값 중부원점 >> WGS84 좌표계로 변환
+const proj4 = require('proj4');
+require('moment-timezone');
+// 시간대는 한국 서울 기준
+moment.tz.setDefault('Asia/Seoul');
+// 텍스트 색깔 선택 옵션 활성화
+colors.enable();
+
+exports.printSqlLog = (sql, params) => {
+  // 콘솔에 출력할 sql문 생성
+  const executedSql = params ? mysql.format(sql, params) : mysql.format(sql);
+  logger.info(
+    `[${moment().format(
+      'YYYY-MM-DD HH:mm:ss',
+    )}] [ 실행된 SQL문 ] ${executedSql} `.blue,
+  );
+};
+exports.printCurrentTime = () => {
+  return moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
+};
+// min ~ max 까지 랜덤으로 숫자 생성
+// TODO 현재 시간까지 추가 권장
+exports.generateRandomNumber = function (min, max) {
+  const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomNumber;
+};
+exports.generateRandomToken = function () {
+  return crypto.randomBytes(20).toString('hex');
+};
+exports.convertLocationData = coordinateObj => {
+  //GRS80(중부원점) 좌표계
+  const grs80 =
+    '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs';
+  //wgs84(위경도)좌표계
+  const wgs84 =
+    '+title=WGS 84 (long/lat) +proj=longlat +ellps=WGS84 +datum=WGS84 +units=degrees';
+  // let coord = proj4(fromProjection, toProjection, coordinates);
+  // fromProjection : 변환 대상 좌표계, toProjection : 변환 목표 좌표계, coordinates : 객체 또는 배열 형태 (예시 {x: 'x', y: 'y'} 또는 [x, y])
+  const coord = proj4(grs80, wgs84, coordinateObj);
+  return { latitude: coord.x, longitude: coord.y };
+};
+
+// 로그인 여부 판단
+exports.isLoggedIn = function (req, res, next) {
+  console.log('hello');
+  // 로그인하지 않은 경우
+  if (!req.session.userid) {
+    next(new UnauthorizedError('Login required'));
+  }
+  // 현재 로그인한 상태라면
+  next();
+};
+// 로그인한 사용자 id와 req.params.id 일치 여부 파악
+exports.isLoginUserInfo = function (req, res, next) {
+  let { userId } = req.params;
+  // req.params.userId 는 string이므로 숫자로 변환 필요
+  userId = parseInt(userId, 10);
+  console.log(req.session.userid !== userId);
+  if (req.session.userid !== userId) {
+    return next(
+      new ClientError('Req.params.id does not same with loginUser id'),
+    );
+  }
+  next();
+};
+// 로그인하지 않았는지
+exports.isNotLoggedIn = function (req, res, next) {
+  // 로그인하지 않은 경우
+  if (req.session.userid) {
+    return res.status(errCode.FORBIDDEN).json({ message: 'ALREADY_LOGGED_IN' });
+  }
+  // 현재 로그인 안 한 상태라면(로그인 페이지, 회원가입 페이지 접근 가능)
+  next();
+};
+// 접근 가능 여부 판단
+exports.hasNoPermission = function (req, res, next) {
+  // 사용자가 로그인 시
+  if (req.session.userid && req.session.role === 'user') {
+    return res.status(errCode.FORBIDDEN).json({ message: 'NO_PERMISSION' });
+  }
+  // 관리자 로그인 시
+  next();
+};
+// 로그인 안 한 상태인지 체크
+exports.isNotAuthorized = function (req, res, next) {
+  // session 객체가 존재하지 않으면,
+  if (!req.session) return res.send(err);
+
+  // 현재 로그인한 상태라면,
+  if (req.session && req.session.userid) {
+    return res.sendStatus(errorCode.FORBIDDEN);
+  }
+  // userid 가 없을 경우에만 다음 미들웨어 실행
+  next();
+};
+// req 객체에 logout 메소드 추가
+exports.addLogout = function () {
+  return function (req, res, next) {
+    req.logout = function () {
+      req.session.destroy(); // 세션 삭제
+    };
+
+    next();
+  };
+};
+// 8글자의 패스워드 랜덤 생성
+exports.generateRandomPassword = () => {
+  const chars =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz!@#$%^&*';
+  const stringLength = 8;
+
+  var randomString = '';
+  for (let i = 0; i < stringLength; i++) {
+    let randomNum = Math.floor(Math.random() * chars.length);
+    randomString += chars.substring(randomNum, randomNum + 1);
+  }
+
+  return randomString;
+};
