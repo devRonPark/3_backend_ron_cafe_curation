@@ -11,35 +11,33 @@ const NotFoundError = require('../errors/not-found.error');
 const AlreadyInUseError = require('../errors/already-in-use.error');
 const { printSqlLog } = require('../util');
 const logger = require('../../config/logger');
-const { deleteImage } = require('../middlewares/ImageDelete');
-const InternalServerError = require('../errors/internal-sever.error');
-const ClientError = require('../errors/client.error.js');
 
 class UserInfoValidator {
   static validateUsername = check('name')
     .exists({ checkFalsy: true })
     .withMessage('Missing required attribute - name')
     .isLength({ min: 3, max: 16 })
-    .withMessage('Name must be at least 3, less than 16')
-    .custom(async nameVal => {
-      const connection = await pool.getConnection();
+    .withMessage('Name must be at least 3, less than 16');
 
-      try {
-        // name 에 해당하는 사용자 정보 존재 여부 검증
-        const queryString = 'select count(0) from users where name = ?';
-        const queryParams = [nameVal];
-        printSqlLog(queryString, queryParams);
-        const result = await connection.query(queryString, queryParams);
-        if (result[0][0]['count(0)'] > 0)
-          return Promise.resolve(new ValidationError('Name is already in use'));
-        logger.info('Name is not in use');
-        return true;
-      } catch (err) {
-        throw err;
-      } finally {
-        connection.release();
-      }
-    });
+  static isUsernameExist = check('name').custom(async nameVal => {
+    const connection = await pool.getConnection();
+
+    try {
+      // name 에 해당하는 사용자 정보 존재 여부 검증
+      const queryString = 'select count(0) from users where name = ?';
+      const queryParams = [nameVal];
+      printSqlLog(queryString, queryParams);
+      const result = await connection.query(queryString, queryParams);
+      if (result[0][0]['count(0)'] > 0)
+        return Promise.resolve(new ValidationError('Name is already in use'));
+      logger.info('Name is not in use');
+      return true;
+    } catch (err) {
+      throw err;
+    } finally {
+      connection.release();
+    }
+  });
 
   static validateEmail = check('email')
     .exists({ checkFalsy: true })
@@ -77,8 +75,8 @@ class UserInfoValidator {
       .withMessage(
         'Password is at least 8 and less than 16. number, letter, special character must be required.',
       );
-  static validatePasswordConfirmation = body('password_confirmation').custom(
-    (value, { req }) => {
+  static validatePasswordConfirmation = fieldName =>
+    body(fieldName).custom((value, { req }) => {
       if (!value)
         throw new ValidationError(
           'Missing required attribute - password_confirmation',
@@ -89,19 +87,17 @@ class UserInfoValidator {
           'passwordConfirmation field must have the same value as the password field',
         );
       return true;
-    },
-  );
+    });
   static validatePhoneNumber = check('phone_number')
     .exists({ checkFalsy: true })
     .withMessage('Missing required attribute - phone_number')
     .matches(/^01([0|1|6|7|8|9])-([0-9]{3,4})-([0-9]{4})$/)
     .withMessage('The type of 000-0000-0000 is required');
-  static validatePhoneNumberInQuery = query('phone-number')
+  static validateUserId = check('id')
     .exists({ checkFalsy: true })
-    .withMessage('Missing required attribute - phone-number')
-    .matches(/^01([0|1|6|7|8|9])-([0-9]{3,4})-([0-9]{4})$/)
-    .withMessage('The type of 000-0000-0000 is required');
-
+    .withMessage('Missing required attribute - id')
+    .isInt()
+    .withMessage('Number type required');
   static validateUserIdParam = param('userId')
     .exists({ checkFalsy: true })
     .isInt()
@@ -167,10 +163,6 @@ class UserInfoValidator {
         message: error.msg,
       };
     });
-    if (req.file) {
-      // 에러 발생 시 업로드된 이미지 파일 삭제
-      deleteImage(req.file.path);
-    }
     if (hasErrors) {
       next(new ValidationError('Validation Error', validationErrors));
     }

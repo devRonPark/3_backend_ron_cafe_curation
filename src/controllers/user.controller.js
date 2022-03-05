@@ -20,7 +20,7 @@ const ClientError = require('../lib/errors/client.error.js');
 
 class UserController {
   // 사용자 정보 조회 컨트롤러
-  static getUserData = async (req, res, next) => {
+  static getUserInfoById = async (req, res, next) => {
     const reqObj = { ...req.params };
     const { userId } = reqObj;
 
@@ -43,20 +43,97 @@ class UserController {
       connection.release();
     }
   };
-  // 아이디 찾기 컨트롤러
-  static findEmail = async function (req, res, next) {
-    const phoneNumber = req.query['phone-number'];
+  static getUserId = async (req, res, next) => {
+    const reqObj = { ...req.body };
+    const { name, phone_number } = reqObj;
 
     const connection = await pool.getConnection();
 
     try {
-      const queryString = 'select email from users where phone_number = ?';
-      const queryParams = [phoneNumber];
+      const queryString =
+        'select id from users where name = ? and phone_number = ? and deleted_at is null';
+      const queryParams = [name, phone_number];
       const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
-      if (!userInfo)
-        throw new NotFoundError('Email with this phone_number does not exist');
-      logger.info('Email with this email exists');
+
+      if (!userInfo) {
+        throw new NotFoundError('User info does not exist');
+      }
+      return res.status(successCode.OK).json({ userId: userInfo.id });
+    } catch (err) {
+      next(err);
+    } finally {
+      connection.release();
+    }
+  };
+  static validateUserWithPasswordCheck = async (req, res, next) => {
+    const reqObj = { ...req.params, ...req.body };
+    const { userId, password } = reqObj;
+
+    const connection = await pool.getConnection();
+
+    try {
+      // userId 로 사용자 정보 조회
+      const queryString =
+        'select id, password from users where id = ? and deleted_at is null';
+      const queryParams = [userId];
+      const result = await connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) throw new NotFoundError('User info not found');
+
+      const plainPwd = password;
+      const dbInPwd = result[0][0].password;
+      // 비밀번호 일치 여부 파악
+      const isPwdMatch = await bcrypt.compare(plainPwd, dbInPwd);
+
+      if (!isPwdMatch) throw new ClientError('Password is wrong');
+      logger.info('User authentication success');
+      return res.status(successCode.OK).json({ userId: userInfo.id });
+    } catch (err) {
+      next(err);
+    } finally {
+      connection.release();
+    }
+  };
+  // 사용자 검증 후 디비에서 조회된 사용자 정보 응답
+  // @params req.body { name, email, phone_number }
+  // @returns res.body { id, name, email, phone_number, profile_image_path }
+  static getUserInfo = async (req, res, next) => {
+    const reqObj = { ...req.params };
+    const { name, email, phone_number } = reqObj;
+
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select id, name, email, phone_number, profile_image_path from users where name = ? and email = ? and phone_number = ? and deleted_at is null';
+      const queryParams = [name, email, phone_number];
+      const result = connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) {
+        throw new NotFoundError('User info not found');
+      }
+      return res.status(successCode.OK).json({ user: userInfo });
+    } catch (err) {
+      next(err);
+    } finally {
+      connection.release();
+    }
+  };
+
+  // 아이디 찾기 컨트롤러
+  static getEmail = async function (req, res, next) {
+    const userId = req.params.userId;
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select email from users where userId = ? and deleted_at is null';
+      const queryParams = [userId];
+      const result = await connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) throw new NotFoundError('User info does not exist');
+      logger.info('User info exists');
 
       return res.status(successCode.OK).json({ email: userInfo.email });
     } catch (err) {
@@ -88,36 +165,23 @@ class UserController {
     }
   };
   // 비밀번호 찾기 라우터 로직
-  static findPassword = async function (req, res, next) {
+  static sendEmailWithNewPassword = async function (req, res, next) {
     const reqObj = { ...req.body };
-    const { email, phone_number } = reqObj;
+    const { id, email } = reqObj;
 
     const connection = await pool.getConnection();
     connection.beginTransaction();
 
     try {
-      // 사용자 휴대폰 번호와 이메일 주소로 데이터베이스 조회
-      const selectQueryString =
-        'select id from users where email = ? and phone_number = ? and deleted_at is null';
-      const selectQueryParams = [email, phone_number];
-      printSqlLog(selectQueryString, selectQueryParams);
-      const resultOfSelectQuery = await connection.query(
-        selectQueryString,
-        selectQueryParams,
-      );
-      const userInfo = resultOfSelectQuery[0][0];
-      if (!userInfo) {
-        throw new NotFoundError('User info does not exist');
-      }
-
       // 8자리의 임시 비밀번호 생성
       const temporaryPassword = generateRandomPassword();
       // 비밀번호 암호화
       const hashedTemporaryPassword =
         encryptTemporaryPassword(temporaryPassword);
 
-      const updateQueryString = 'update users set password = ? where id = ?';
-      const updateQueryParams = [hashedTemporaryPassword, userInfo.id];
+      const updateQueryString =
+        'update users set password = ? where id = ? and email = ? and deleted_at is null';
+      const updateQueryParams = [hashedTemporaryPassword, id, email];
       printSqlLog(updateQueryString, updateQueryParams);
       const resultOfUpdateQuery = await connection.execute(
         updateQueryString,
@@ -128,12 +192,12 @@ class UserController {
         throw new InternalServerError('User password update fail');
       }
 
-      await connection.commit();
       // 임시 비밀번호가 포함된 이메일 발송
       await UserController.sendEmailForTemporaryPassword(
         email,
         temporaryPassword,
       );
+      await connection.commit();
       return res.sendStatus(successCode.OK);
     } catch (err) {
       await connection.rollback();
@@ -157,13 +221,11 @@ class UserController {
       const result = await connection.execute(queryString, queryParams);
       const isUserProfileUpdated = result[0].affectedRows > 0;
       if (!isUserProfileUpdated) {
-        deleteImage(req.file.path);
         throw new InternalServerError('PROFILE_INFO_UPDATE_FAILURE');
       }
       logger.info('Profile image path is updated successfully');
       return res.sendStatus(successCode.OK);
     } catch (err) {
-      deleteImage(req.file.path);
       next(err);
     } finally {
       connection.release();
@@ -240,7 +302,7 @@ class UserController {
         subject: '☕ ZZINCAFE 비밀번호 초기화 메일',
         html: `
           <p>비밀번호 초기화를 위해서는 아래의 URL 을 클릭해 주세요.</p>
-          <a href="http://localhost:3000/users/${userId}/password/reset/${tokenVal}">👉클릭</a>
+          <a href="http://localhost:3000/users/${userId}/reset-password/${tokenVal}">👉클릭</a>
         `,
       };
       const isMailSent = await sendMailRun(message); // 메일 발송
@@ -253,13 +315,14 @@ class UserController {
   };
   static updateNewPassword = async (req, res, next) => {
     const reqObj = { ...req.params, ...req.body };
-    let { userId, token, currentPassword, password } = reqObj;
+    let { userId, token, current_password, new_password } = reqObj;
     userId = parseInt(userId, 10);
     const queryString = {
       checkTokenExist: 'select count(0) from auth where token_value = ?',
-      getPwdInDb: 'select password from users where id = ?',
+      getPwdInDb:
+        'select password from users where id = ? and deleted_at is null',
       updateNewPwd:
-        'update users set password = ?, updated_at = ? where id = ?',
+        'update users set password = ?, updated_at = ? where id = ? and deleted_at is null',
     };
     const queryParams = {
       checkTokenExist: [token],
@@ -293,13 +356,13 @@ class UserController {
         throw new InternalServerError('Password of user does not exist');
       logger.info('Password of user exist');
       // passwordInDb와 currentPassword 일치 여부 파악
-      const isPwdMatch = await bcrypt.compare(currentPassword, pwdInDb);
+      const isPwdMatch = await bcrypt.compare(current_password, pwdInDb);
       if (!isPwdMatch) throw new ClientError('password is wrong');
       logger.info('Password is same');
       // 비밀번호가 일치하면, 입력된 newPassword 암호화
       const saltRounds = 10;
       const salt = bcrypt.genSaltSync(saltRounds);
-      const encryptedPassword = bcrypt.hashSync(password, salt);
+      const encryptedPassword = bcrypt.hashSync(new_password, salt);
       logger.info('New password is encrypted');
       // 암호화된 newPassword를 db에 업데이트
       const updated_at = printCurrentTime();
@@ -352,7 +415,8 @@ class UserController {
     const connection = await pool.getConnection();
 
     try {
-      const queryString = 'update users set deleted_at = ? where id = ?';
+      const queryString =
+        'update users set deleted_at = ? where id = ? and deleted_at is null';
       const deleted_at = printCurrentTime();
       const queryParams = [deleted_at, userId];
       const result = connection.execute(queryString, queryParams);
@@ -379,7 +443,7 @@ class UserController {
     const queryString = {
       comments: 'select cafe_id, comment from reviews where user_id=?',
       cafes:
-        'select name, jibun_address, image_path from cafes where cafe_id=?',
+        'select id, name, jibun_address, image_path from cafes where cafe_id=?',
     };
     const queryParams = {
       comments: [],

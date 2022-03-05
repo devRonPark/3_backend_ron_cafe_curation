@@ -5,6 +5,7 @@ const session = require('express-session');
 const sessionStore = require('./config/sessionStore');
 const { addLogout } = require('./lib/util');
 const { errorCode } = require('./lib/statusCodes/statusCode');
+const { deleteImage } = require('./lib/middlewares/ImageDelete');
 const ValidationError = require('./lib/errors/validation.error');
 const AlreadyInUseError = require('./lib/errors/already-in-use.error');
 const NotFoundError = require('./lib/errors/not-found.error');
@@ -153,6 +154,10 @@ app.use(function (err, req, res, next) {
 });
 // 에러 로깅 미들웨어
 app.use(function errorLogger(err, req, res, next) {
+  if (req.file) {
+    // 에러 발생 시 업로드된 이미지 파일 삭제
+    deleteImage(req.file.path);
+  }
   logger.error(err.stack);
 });
 

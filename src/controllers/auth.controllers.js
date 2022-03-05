@@ -8,6 +8,7 @@ const NotFoundError = require('../lib/errors/not-found.error');
 const ClientError = require('../lib/errors/client.error.js');
 const AlreadyInUseError = require('../lib/errors/already-in-use.error');
 const pool = require('../config/mysql');
+const { destoryFlag } = require('../lib/util');
 
 class AuthController {
   // 로그인 시 사용자 존재 여부 검사
@@ -98,8 +99,11 @@ class AuthController {
         throw new InternalServerError('User register fail');
       }
       logger.info('User register success');
+      // TODO 회원가입 성공 시, 중복 요청에 대한 처리 필요
       return res.sendStatus(successCode.CREATED);
     } catch (err) {
+      // TODO 회원가입 실패 시, 중복 요청에 대한 처리 필요
+      destoryFlag(req);
       throw err;
     } finally {
       connection.release();

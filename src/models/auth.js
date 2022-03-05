@@ -1,6 +1,5 @@
 const logger = require('../config/logger');
 const DB = require('../config/mysql');
-const InternalServerError = require('../lib/errors/internal-sever.error');
 const { printCurrentTime, printSqlLog } = require('../lib/util');
 const pool = require('../config/mysql');
 
