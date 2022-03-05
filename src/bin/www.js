@@ -1,18 +1,29 @@
 const app = require('../app');
-const http = require('http');
+// https, fs 모듈 추가 
+const https = require('https');
+const fs = require('fs');
 const logger = require('../config/logger');
 const { debug } = require('console');
 
 /**
  * 현재 환경으로부터 port 가져와 Express에 저장
  */
-const port = normalizePort(process.env.PORT || '3000');
+const port = normalizePort(process.env.PORT || '443');
 app.set('port', port);
+
+/**
+ * 인증파일 추가
+ */
+const options = {
+  ca : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/fullchain.pem'),
+  key : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/privkey.pem'),
+  cert : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/cert.pem')
+}
 
 /**
  * HTTP server 생성
  */
-const server = http.createServer(app);
+const server = https.createServer(options, app);
 
 /**
  * 모든 네트워크 요청에 대해 제공된 port에서 Listen

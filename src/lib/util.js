@@ -120,16 +120,20 @@ exports.addLogout = function () {
     next();
   };
 };
-// 8글자의 패스워드 랜덤 생성
+// 12글자의 패스워드 랜덤 생성
 exports.generateRandomPassword = () => {
   const chars =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz!@#$%^&*';
-  const stringLength = 8;
+  const stringLength = 12;
+  const passwordRegExp = /^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^*()\-_=+\\\|\[\]{};:\'",.<>\/?])*.{8,16}$/;
 
   var randomString = '';
   for (let i = 0; i < stringLength; i++) {
     let randomNum = Math.floor(Math.random() * chars.length);
     randomString += chars.substring(randomNum, randomNum + 1);
+  }
+  if (!passwordRegExp.test(randomString)) {
+    this.generateRandomPassword();
   }
 
   return randomString;

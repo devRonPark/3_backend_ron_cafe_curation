@@ -77,6 +77,7 @@ class UserController {
       const queryString =
         'select id, password from users where id = ? and deleted_at is null';
       const queryParams = [userId];
+      printSqlLog(queryString, queryParams);
       const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
       if (!userInfo) throw new NotFoundError('User info not found');
@@ -99,16 +100,17 @@ class UserController {
   // @params req.body { name, email, phone_number }
   // @returns res.body { id, name, email, phone_number, profile_image_path }
   static getUserInfo = async (req, res, next) => {
-    const reqObj = { ...req.params };
+    const reqObj = { ...req.body };
     const { name, email, phone_number } = reqObj;
 
     const connection = await pool.getConnection();
 
     try {
       const queryString =
-        'select id, name, email, phone_number, profile_image_path from users where name = ? and email = ? and phone_number = ? and deleted_at is null';
+      'select id, name, email, phone_number, profile_image_path from users where name = ? and email = ? and phone_number = ? and deleted_at is null';
       const queryParams = [name, email, phone_number];
-      const result = connection.query(queryString, queryParams);
+      printSqlLog(queryString, queryParams);
+      const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
       if (!userInfo) {
         throw new NotFoundError('User info not found');

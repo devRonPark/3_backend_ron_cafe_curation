@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/bin/www.js",
-    "start:dev": "nodemon --watch src/ src/bin/www.js"
+    "start:dev": "pm2 start src/bin/www.js",
+    "stop": "pm2 kill"
   },
   "keywords": [],
   "author": "",

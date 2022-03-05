@@ -2,6 +2,7 @@ const express = require('express');
 require('express-async-errors');
 require('dotenv').config();
 const session = require('express-session');
+
 const sessionStore = require('./config/sessionStore');
 const { addLogout } = require('./lib/util');
 const { errorCode } = require('./lib/statusCodes/statusCode');
@@ -43,6 +44,10 @@ app.use(
   }),
   addLogout(),
 );
+
+app.get('/', (req, res) => {
+  res.status(200).json('Hello, World');
+});
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
