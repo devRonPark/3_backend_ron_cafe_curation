@@ -6,89 +6,140 @@ const { isLoggedIn, isLoginUserInfo } = require('../lib/util');
 const {
   validateUserInfo,
   validatePhoneNumber,
+  validateUserId,
   validateEmail,
   validatePassword,
-  validatePhoneNumberInQuery,
+  validatePasswordConfirmation,
   validateUserIdParam,
   validateCallback,
+  validateUsername,
 } = require('../lib/middlewares/UserValidate');
 const { uploadImage } = require('../lib/middlewares/ImageUpload');
 
 // 사용자 아이디 찾기
-// GET /api/users/email?phone-number=${phone-number}
-userRouter.get(
-  '/email',
-  [validatePhoneNumberInQuery, validateCallback],
-  UserController.findEmail,
-);
-
-// 사용자 비밀번호 찾기(임시 비밀번호 생성)
-// POST /api/users/password
+// POST /api/users/find-email
+// req.body {name, phone_number}
+// select id from users where name = ? and phone_number = ? and deleted_at is null
+// res.body : {userId}
 userRouter.post(
-  '/password',
-  [validatePhoneNumber, validateEmail, validateCallback],
-  UserController.findPassword,
+  '/find-email',
+  [validateUsername, validatePhoneNumber, validateCallback],
+  UserController.getUserId,
+);
+// GET /api/users/:userId/email
+// req.params {userId}
+// select email from users where id = ? and deleted_at is null
+// res.body : {email}
+userRouter.get(
+  '/:userId/email',
+  [validateUserIdParam, validateCallback],
+  UserController.getEmail,
 );
 
-// 현재 로그인되어 있는 사용자 조회
-// api/users/:userId
+// 사용자 비밀번호 찾기
+// 사용자 존재 여부 확인 후 사용자 조회 결과 페이지 렌더링
+// POST /api/users/find-user
+// req.body : {name, email, phone_number}
+// select id, name, email, phone_number where name = ? and email = ? and phone_number = ? and deleted_at is null
+// res.body : { user: {id, name, email, phone_number} }
+userRouter.post(
+  '/find-user',
+  [validateUsername, validateEmail, validatePhoneNumber, validateCallback],
+  UserController.getUserInfo,
+);
+// 이메일 발송 클릭 -> 임시 비밀번호 생성 후 이메일 발송
+// POST /api/users/forget-password/send
+// req.body : {id, email}
+// res : 200 OK
+userRouter.post(
+  '/forget-password/send',
+  [validateUserId, validateEmail, validateCallback],
+  UserController.sendEmailWithNewPassword,
+);
+
+// 회원 정보 수정 페이지
+// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
+// POST /api/users/:userId
+// req.params {userId}, req.body {password}
+// select id, password from users where id = ? and deleted_at is null
+// res.body {userId}
+userRouter.post(
+  '/:userId',
+  [validateUserIdParam, validatePassword, validateCallback], // 데이터 유효성 검증
+  isLoggedIn, // 사용자 로그인 여부 검증
+  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
+  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
+);
+// userId로 현재 로그인한 사용자 정보 응답으로 전달
+// GET /api/users/:userId
+// req.params {userId}
+// res.body {id, name, email, phone_number, profile_image_path}
 userRouter.get(
   '/:userId',
+  [validateUserIdParam, validateCallback],
   isLoggedIn, // 사용자 로그인 여부 검증
-  [validateUserIdParam, validateCallback], // userId 형식 검증
-  isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
-  UserController.getUserData,
+  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
+  UserController.getUserInfoById,
 );
 
 // User 회원정보 변경
 // 1. 프로필 이미지 변경
 // PATCH /api/users/:userId/profile
+// req.params {userId}, req.body {image: File}
+// update users set profile_image_path = ?, updated_at = ? where id = ?
+// res 200 OK
 userRouter.patch(
   '/:userId/profile',
-  isLoggedIn, // 사용자 로그인 여부 검증
   [validateUserIdParam, validateCallback], // userId 형식 검증
+  isLoggedIn, // 사용자 로그인 여부 검증
   isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
   uploadImage,
   UserController.updateProfileImage,
 );
 // 2. 회원 정보 변경(닉네임, 휴대폰 번호)
 // PATCH /api/users/:userId
+// req.params {userId}, req.body {phone_number}
+// res 200 OK
 userRouter.patch(
   '/:userId',
+  [validateUserIdParam, validateUserInfo, validateCallback],
   isLoggedIn, // 로그인 여부 파악
   isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
-  [validateUserIdParam, validateUserInfo, validateCallback],
   UserController.updateNameAndPhoneNumber,
 );
 
 // 3. 비밀번호 변경
-//   - 비밀번호 변경을 요청한 회원이 데이터베이스에 존재하는지 확인(findOne)
-//   - 서버에서 세션 객체에 생성하여 데이터베이스에 저장
-//   - nodemailer 를 통해 회원 이메일로 링크 전송
-//   - 회원은 링크에 접속하여 새로운 비밀번호 설정하고(여기서 유효성 검사 실시?) 서버로 전송
-//   - 서버에서는 사용자가 입력한 현재 비밀번호와 데이터베이스에 저장된 비밀번호가 일치하는지 확인
-//   - update 쿼리문으로 비밀번호 재설정 완료
-//   - (비밀번호가 변경된 경우)데이터베이스 업데이트 후 현재 로그인 된 세션 삭제
-// -> 비밀번호 초기화 이메일 발송 API
+// 비밀번호 초기화 메일 발송
+// req.params {userId} req.body {email}
+// POST /api/users/reset-password/send
+// res 200 OK
 userRouter.post(
-  '/:userId/password/new',
-  [validateUserIdParam, validateCallback],
+  '/:userId/reset-password/send',
+  [validateUserIdParam, validateEmail, validateCallback],
   isLoggedIn, // 로그인 여부 파악
   isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
   UserController.sendPasswordInitMail,
 );
-// -> 현재 비밀번호, 새로 변경할 비밀번호 입력 후 업데이트 요청
+// 비밀번호 변경
+//-> 현재 비밀번호, 새로 변경할 비밀번호 입력 후 업데이트 요청
+// req.params: {userId, token} req.body: {current_password, new_password, new_password_again}
+// PATCH /api/users/:userId/reset-password/:token
+// res 200 OK
 userRouter.patch(
-  '/:userId/password/reset/:token',
+  '/:userId/password/:token',
   [
-    validatePassword('currentPassword'),
-    validatePassword('password'),
+    validatePassword('current_password'),
+    validatePassword('new_password'),
+    validatePasswordConfirmation('new_password_again'),
     validateCallback,
   ], // 유효성 검증
   UserController.updateNewPassword,
 );
 // 회원 탈퇴
-//   - req.session.userid 가 존재하는 경우에만 동작함.
+// DELETE /api/users/:userId
+// req.params {userId}
+// update users set deleted_at = ? where id = ? and deleted_at is null
+// res 200 OK
 // 탈퇴 요청 들어올 시 회원 상태를 비활성화로 변경시켜준다.
 userRouter.delete(
   '/:userId',
@@ -99,7 +150,9 @@ userRouter.delete(
 );
 
 // 현재 로그인한 사용자가 작성한 모든 댓글 목록 조회
-// GET /api/users/:id/comments
+// GET /api/users/:userId/comments
+// req.params {userId}
+// res.body {cafes: [{}, ...], comments: [{}, ...]}
 userRouter.get(
   '/:userId/comments',
   [validateUserIdParam, validateCallback],
@@ -109,7 +162,9 @@ userRouter.get(
 );
 
 // 현재 로그인한 사용자가 좋아요 버튼을 누른 카페 목록 조회
-// GET /api/users/:id/likes
+// GET /api/users/:userId/likes
+// req.params {userId}
+// res.body {likes: [{cafe_id: }, ...], cafes: [{cafe_id, name, jibun_address, image_path}, ...]}
 userRouter.get(
   '/:userId/likes',
   [validateUserIdParam, validateCallback],

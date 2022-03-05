@@ -11,6 +11,7 @@ const {
 const { passwordEncryption } = require('../lib/middlewares/passwordEncryption');
 const AuthController = require('../controllers/auth.controllers');
 const { uploadImage } = require('../lib/middlewares/ImageUpload');
+const { blockRequestMultipleTimes } = require('../lib/util');
 
 // 사용자 회원가입 라우트
 // POST /api/auth/local/new-user
@@ -21,7 +22,7 @@ authRouter.post(
     validateUsername,
     validateEmail,
     validatePassword('password'),
-    validatePasswordConfirmation,
+    validatePasswordConfirmation('password_confirmation'),
     validatePhoneNumber,
     validateCallback,
   ],

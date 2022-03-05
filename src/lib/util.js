@@ -28,6 +28,15 @@ exports.printSqlLog = (sql, params) => {
 exports.printCurrentTime = () => {
   return moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
 };
+
+const currentDate = moment(Date.now()).format('YYYY-MM-DD HH:mm:ss');
+console.log(typeof currentDate);
+setTimeout(() => {
+  const afterDate = moment(Date.now()).format('YYYY-MM-DD HH:mm:ss');
+  console.log('currentDate: ', currentDate);
+  console.log('afterDate: ', afterDate);
+  console.log('difference: ', moment().subtract(afterDate, currentDate));
+}, 5000);
 // min ~ max 까지 랜덤으로 숫자 생성
 // TODO 현재 시간까지 추가 권장
 exports.generateRandomNumber = function (min, max) {
@@ -52,10 +61,9 @@ exports.convertLocationData = coordinateObj => {
 
 // 로그인 여부 판단
 exports.isLoggedIn = function (req, res, next) {
-  console.log('hello');
   // 로그인하지 않은 경우
   if (!req.session.userid) {
-    next(new UnauthorizedError('Login required'));
+    return next(new UnauthorizedError('Login required'));
   }
   // 현재 로그인한 상태라면
   next();
@@ -65,7 +73,6 @@ exports.isLoginUserInfo = function (req, res, next) {
   let { userId } = req.params;
   // req.params.userId 는 string이므로 숫자로 변환 필요
   userId = parseInt(userId, 10);
-  console.log(req.session.userid !== userId);
   if (req.session.userid !== userId) {
     return next(
       new ClientError('Req.params.id does not same with loginUser id'),
