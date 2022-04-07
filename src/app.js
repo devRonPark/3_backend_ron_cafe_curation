@@ -2,7 +2,8 @@ const express = require('express');
 require('express-async-errors');
 require('dotenv').config();
 const session = require('express-session');
-
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const sessionStore = require('./config/sessionStore');
 const { addLogout } = require('./lib/util');
 const { errorCode } = require('./lib/statusCodes/statusCode');
@@ -31,16 +32,26 @@ app.use(morganMiddleware); // 콘솔창에 통신결과 나오게 해주는 미�
 
 // 미들웨어 등록 시작, 아래 미들웨어들은 내부적으로 next() 가 실행됨.
 app.use(
-  // json request body 파싱
-  express.json(),
-  // url을 통해 전달되는 데이터에 한글, 공백 등과 같은 문자가 포함될 경우 제대로 인식되지 않는 문제 해결
-  express.urlencoded({ extended: false }),
   // DB에 session 테이블 추가
   session({
     secret: process.env.SESSION_SECRET_KEY,
     store: sessionStore,
-    resave: false, // 세션 아이디를 접속할 때마다 발급하지 않는다.
-    saveUninitialized: true, // 세션이 저장되기 전에 uninitialized 상태로 미리 만들어서 저장한다
+    resave: false, 
+    saveUninitialized: false,
+    cookie: {
+      secure: false,
+      httpOnly: true
+    }
+  }),
+  // json request body 파싱
+  express.json(),
+  // url을 통해 전달되는 데이터에 한글, 공백 등과 같은 문자가 포함될 경우 제대로 인식되지 않는 문제 해결
+  express.urlencoded({ extended: false }),
+  // 쿠키 파서 미들웨어
+  cookieParser(process.env.SESSION_SECRET_KEY),
+  cors({
+    origin: true,
+    credentials: true
   }),
   addLogout(),
 );

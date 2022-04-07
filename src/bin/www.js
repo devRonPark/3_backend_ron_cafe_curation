@@ -15,9 +15,9 @@ app.set('port', port);
  * 인증파일 추가
  */
 const options = {
-  ca : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/fullchain.pem'),
-  key : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/privkey.pem'),
-  cert : fs.readFileSync('/etc/letsencrypt/live/www.jjincafe-in-seoul.com/cert.pem')
+  ca : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/fullchain.pem'),
+  key : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/privkey.pem'),
+  cert : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/cert.pem')
 }
 
 /**

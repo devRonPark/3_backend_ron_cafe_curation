@@ -16,19 +16,6 @@ const {
 } = require('../lib/middlewares/UserValidate');
 const { uploadImage } = require('../lib/middlewares/ImageUpload');
 
-// 회원 정보 수정 페이지
-// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
-// POST /api/users/:userId
-// req.params {userId}, req.body {password}
-// select id, password from users where id = ? and deleted_at is null
-// res.body {userId}
-userRouter.post(
-  '/:userId',
-  [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
-  isLoggedIn, // 사용자 로그인 여부 검증
-  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
-  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
-);
 // userId로 현재 로그인한 사용자 정보 응답으로 전달
 // GET /api/users/:userId
 // req.params {userId}
@@ -39,22 +26,35 @@ userRouter.get(
   isLoggedIn, // 사용자 로그인 여부 검증
   isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
   UserController.getUserInfoById,
-);
-
-// 사용자 아이디 찾기
-// POST /api/users/find-email
-// req.body {name, phone_number}
-// select id from users where name = ? and phone_number = ? and deleted_at is null
-// res.body : {userId}
-userRouter.post(
-  '/find-email',
-  [validateUsername, validatePhoneNumber, validateCallback],
-  UserController.getUserId,
-);
-// GET /api/users/:userId/email
-// req.params {userId}
-// select email from users where id = ? and deleted_at is null
-// res.body : {email}
+  );
+  
+  // 사용자 아이디 찾기
+  // POST /api/users/find-email
+  // req.body {name}
+  // select email from users where name = ? and deleted_at is null
+  // res.body : {email}
+  userRouter.post(
+    '/find-email',
+    [validateUsername, validateCallback],
+    UserController.getEmail,
+    );
+    // 회원 정보 수정 페이지
+    // userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
+    // POST /api/users/:userId
+    // req.params {userId}, req.body {password}
+    // select id, password from users where id = ? and deleted_at is null
+    // res.body {userId}
+    userRouter.post(
+      '/:userId',
+      [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
+      isLoggedIn, // 사용자 로그인 여부 검증
+      isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
+      UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
+    );
+    // GET /api/users/:userId/email
+    // req.params {userId}
+    // select email from users where id = ? and deleted_at is null
+    // res.body : {email}
 userRouter.get(
   '/:userId/email',
   [validateUserIdParam, validateCallback],
@@ -71,6 +71,15 @@ userRouter.post(
   '/find-user',
   [validateUsername, validateEmail, validatePhoneNumber, validateCallback],
   UserController.getUserInfo,
+);
+
+// 이메일 발송 클릭 -> 아이디 풀 정보 발송
+// POST /api/users/forget-email/send
+// req.body : { email }
+// res : 200 OK
+userRouter.post('/forget-email/send',
+  [validateEmail, validateCallback],
+  UserController.sendEmailForEmail
 );
 // 이메일 발송 클릭 -> 임시 비밀번호 생성 후 이메일 발송
 // POST /api/users/forget-password/send

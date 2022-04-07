@@ -5,13 +5,14 @@ const {
   validateEmail,
   validatePassword,
   validatePasswordConfirmation,
-  validatePhoneNumber,
   validateCallback,
 } = require('../lib/middlewares/UserValidate');
 const { passwordEncryption } = require('../lib/middlewares/passwordEncryption');
 const AuthController = require('../controllers/auth.controllers');
 const { uploadImage } = require('../lib/middlewares/ImageUpload');
-const { blockRequestMultipleTimes } = require('../lib/util');
+
+// 사용자 로그인 여부 검증
+authRouter.get('/session-check', AuthController.checkUserLoggedIn);
 
 // 사용자 회원가입 라우트
 // POST /api/auth/local/new-user
@@ -23,7 +24,6 @@ authRouter.post(
     validateEmail,
     validatePassword('password'),
     validatePasswordConfirmation('password_confirmation'),
-    validatePhoneNumber,
     validateCallback,
   ],
   passwordEncryption, // 비밀번호 암호화
@@ -51,7 +51,6 @@ authRouter.post(
 authRouter.post(
   '/local',
   [validateEmail, validatePassword('password'), validateCallback], // 입력 값 유효성 검사
-  AuthController.checkUserWithEmailExist,
   AuthController.authenticate,
 );
 
@@ -66,5 +65,8 @@ authRouter.post(
   [validateEmail, validateCallback], // 입력 값 유효성 검사
   AuthController.authEmail,
 );
+// 회원가입 시 이메일 인증번호 확인 라우트
+// POST /api/auth/email-verify
+authRouter.post('/email-verify', AuthController.checkIsVerifyNumberSame);
 
 module.exports = authRouter;

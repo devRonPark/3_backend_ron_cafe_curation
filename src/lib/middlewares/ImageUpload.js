@@ -9,8 +9,9 @@ const ClientError = require('../errors/client.error.js');
 const upload = multerConfig(multer);
 
 exports.uploadImage = function (req, res, next) {
+  console.log("req.file: ", req.file);
   // fieldname 이 'image' 와 일치할 때 파일 업로드 진행
-  const imageUpload = upload.single('image');
+  const imageUpload = upload.single('image_path');
 
   imageUpload(req, res, function (err) {
     if (err instanceof multer.MulterError) {

@@ -28,6 +28,10 @@ exports.printSqlLog = (sql, params) => {
 exports.printCurrentTime = () => {
   return moment(new Date()).format('YYYY-MM-DD HH:mm:ss');
 };
+// DATETIME 형식으로 변경
+exports.convertToDateTimeFormat = date => {
+  return moment(date).format('YYYY-MM-DD HH:mm:ss');
+}
 
 const currentDate = moment(Date.now()).format('YYYY-MM-DD HH:mm:ss');
 console.log(typeof currentDate);

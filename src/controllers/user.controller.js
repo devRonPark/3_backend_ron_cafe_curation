@@ -125,13 +125,14 @@ class UserController {
 
   // 아이디 찾기 컨트롤러
   static getEmail = async function (req, res, next) {
-    const userId = req.params.userId;
+    const reqObj = {...req.body};
+    const {name } = reqObj;
     const connection = await pool.getConnection();
 
     try {
       const queryString =
-        'select email from users where userId = ? and deleted_at is null';
-      const queryParams = [userId];
+        'select email from users where name = ? and deleted_at is null';
+      const queryParams = [name];
       const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
       if (!userInfo) throw new NotFoundError('User info does not exist');
@@ -144,6 +145,27 @@ class UserController {
       connection.release();
     }
   };
+  static sendEmailForEmail = async (req, res, next) => {
+    const reqObj = {...req.body};
+    const {email} = reqObj;
+    try {
+      // 송신자에게 보낼 메시지 작성
+      const message = {
+        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        to: email, // 수신자 이메일 주소
+        subject: '☕ ZZINCAFE 아이디 찾기 결과',
+        html: `
+            <p>ZZINCAFE에 가입한 사용자 아이디 정보</p>
+            <h2>${email}</h2>
+          `,
+      };
+      // 이메일 발송
+      await sendMailRun(message);
+      return res.sendStatus(successCode.OK);
+    } catch (err) {
+      throw new InternalServerError(err.message);
+    }
+  }
 
   // 비밀번호 찾기 로직 상, 임시 비밀번호가 포함된 이메일 발송
   static sendEmailForTemporaryPassword = async (email, newPassword) => {
