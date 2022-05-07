@@ -1,6 +1,6 @@
 const logger = require('../config/logger');
 const DB = require('../config/mysql');
-const { printCurrentTime, printSqlLog } = require('../lib/util');
+const { convertToDateTimeFormat, printSqlLog } = require('../lib/util');
 const pool = require('../config/mysql');
 
 class Auth {
@@ -8,13 +8,19 @@ class Auth {
   // @param token: {token_value: ..., time_to_live: ..., user_id: ...}
   // @return { state: true }
   static saveToken = async data => {
-    const { token_value, user_id, time_to_live } = data;
+    const { email, token_value } = data;
     const connection = await pool.getConnection();
     try {
       const queryString =
-        'insert into auth (token_value, user_id, time_to_live, created_at) values (?, ?, ?, ?)';
-      const created_at = printCurrentTime();
-      const queryParams = [token_value, user_id, time_to_live, created_at];
+        'insert into auth_email (email, ae_type, ae_value, created_at, expired_at) values (?, ?, ?, ?, ?)';
+      // 인증키 생성 시간
+      const createdAt = convertToDateTimeFormat(new Date());
+      // 인증키 만료 시간(10분)
+      let expiredAt = new Date();
+      expiredAt.setMinutes(expiredAt.getMinutes() + 10);
+      expiredAt = convertToDateTimeFormat(expiredAt);
+      // 1 => 회원가입 시 이메일 인증, 2 => 비밀번호 변경
+      const queryParams = [email, 2, token_value, createdAt, expiredAt];
       printSqlLog(queryString, queryParams);
       const result = await connection.execute(queryString, queryParams);
       const isTokenSaved = result[0].affectedRows > 0;
@@ -28,7 +34,7 @@ class Auth {
   // @return { data: [{}]state: true }
   static getTokenByValue = async data => {
     try {
-      const query = 'select * from auth where token_value=?';
+      const query = 'select * from auth_email where ae_value=?';
       const params = data;
       const result = await DB('GET', query, params);
       return result;

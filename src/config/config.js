@@ -1,6 +1,6 @@
 const config = {
   db_info: {
-    connectionLimit: 4,
+    connectionLimit: 10,
     waitForConnections: true,
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,

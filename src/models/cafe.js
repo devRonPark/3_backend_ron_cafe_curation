@@ -1,6 +1,5 @@
 const logger = require('../config/logger');
-// 데이터베이스에 직접 접근하여 데이터 조회, 변경
-const DB = require('../config/mysql');
+const pool = require('../config/mysql');
 
 class Cafe {
   static async saveDataFromPublicApi(cafeData) {
@@ -9,17 +8,29 @@ class Cafe {
       delete cafeInfo.xCoordinate;
       delete cafeInfo.yCoordinate;
     });
+
+    const connection = await pool.getConnection();
+    connection.beginTransaction();
     try {
-      const query = 'insert into user_no_edit_cafes set ?';
+      const queryString =
+        'update cafes set latitude=?, longitude=? where name = ?';
       cafeData.forEach(async cafeInfo => {
-        const params = cafeInfo;
+        const queryParams = [
+          cafeInfo.latitude,
+          cafeInfo.longitude,
+          cafeInfo.name,
+        ];
         // 카페 정보 DB에 저장
-        await DB('POST', query, params);
+        const result = await connection.execute(queryString, queryParams);
       });
+      await connection.commit();
       return { state: true };
     } catch (err) {
+      await connection.rollback();
       logger.error(err.stack);
       throw new Error(err.message);
+    } finally {
+      connection.release();
     }
   }
 }

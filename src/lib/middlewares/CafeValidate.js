@@ -57,11 +57,10 @@ class CafeInfoValidator {
       if (result[0][0]['count(0)'] < 1)
         next(new NotFoundError('Cafe info does not exist'));
       logger.info('Cafe info exists');
+      connection.release();
       next();
     } catch (err) {
       throw new InternalServerError(err.message);
-    } finally {
-      connection.release();
     }
   };
   // 사용자가 이미 좋아요를 눌렀는지 체크
@@ -80,11 +79,11 @@ class CafeInfoValidator {
       if (result[0][0]['count(0)'] > 0)
         throw new AlreadyInUseError('You already liked this cafe');
       logger.info('User like is not activated about this cafe');
+      connection.release();
       next();
     } catch (err) {
       throw err;
     } finally {
-      connection.release();
     }
   };
   // 사용자가 좋아요 해제했는지 체크
@@ -102,11 +101,11 @@ class CafeInfoValidator {
       if (result[0][0]['count(0)'] > 0)
         throw new AlreadyInUseError('You already disabled');
       logger.info('User like is activated about this cafe now');
+      connection.release();
       next();
     } catch (err) {
       throw err;
     } finally {
-      connection.release();
     }
   };
   static validateTel = check('tel')

@@ -88,6 +88,19 @@ class UserInfoValidator {
         );
       return true;
     });
+  static validateNewPasswordCheck = fieldName =>
+    body(fieldName).custom((value, { req }) => {
+      if (!value)
+        throw new ValidationError(
+          'Missing required attribute - new_password_check',
+        );
+
+      if (value !== req.body['new_password'])
+        throw new ValidationError(
+          'newPasswordCheck field must have the same value as the newPassword field',
+        );
+      return true;
+    });
   static validatePhoneNumber = check('phone_number')
     .exists({ checkFalsy: true })
     .withMessage('Missing required attribute - phone_number')
@@ -153,7 +166,7 @@ class UserInfoValidator {
 
   // 유효성 검사 이후 에러 체크
   static validateCallback = function (req, res, next) {
-    console.log("It is executed!!!");
+    console.log('It is executed!!!');
     // validate the data to be submitted
     const result = validationResult(req);
     const hasErrors = !result.isEmpty();

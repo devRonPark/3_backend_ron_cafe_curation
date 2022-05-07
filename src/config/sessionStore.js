@@ -5,11 +5,12 @@ const MySQLStore = require('express-mysql-session')(session);
 // DB Options
 const options = {
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
   user: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 };
+
+console.log('options: ', options);
 
 // create session store
 const sessionStore = new MySQLStore(options);

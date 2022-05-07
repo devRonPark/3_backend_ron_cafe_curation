@@ -1,4 +1,4 @@
-const { errorCode } = require('../lib/statusCodes/statusCode');
+const { errorCode, successCode } = require('../lib/statusCodes/statusCode');
 const ClientError = require('../lib/errors/client.error.js');
 const UnauthorizedError = require('../lib/errors/unauthorized.error');
 const mysql = require('mysql2/promise');
@@ -31,7 +31,7 @@ exports.printCurrentTime = () => {
 // DATETIME 형식으로 변경
 exports.convertToDateTimeFormat = date => {
   return moment(date).format('YYYY-MM-DD HH:mm:ss');
-}
+};
 
 const currentDate = moment(Date.now()).format('YYYY-MM-DD HH:mm:ss');
 console.log(typeof currentDate);
@@ -51,23 +51,24 @@ exports.generateRandomToken = function () {
   return crypto.randomBytes(20).toString('hex');
 };
 exports.convertLocationData = coordinateObj => {
-  //GRS80(중부원점) 좌표계
-  const grs80 =
-    '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs';
+  // EPSG:2097 좌표계
+  const epsg2097 =
+    '+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +units=m +no_defs +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43';
+
   //wgs84(위경도)좌표계
   const wgs84 =
     '+title=WGS 84 (long/lat) +proj=longlat +ellps=WGS84 +datum=WGS84 +units=degrees';
   // let coord = proj4(fromProjection, toProjection, coordinates);
   // fromProjection : 변환 대상 좌표계, toProjection : 변환 목표 좌표계, coordinates : 객체 또는 배열 형태 (예시 {x: 'x', y: 'y'} 또는 [x, y])
-  const coord = proj4(grs80, wgs84, coordinateObj);
-  return { latitude: coord.x, longitude: coord.y };
+  const coord = proj4(epsg2097, wgs84, coordinateObj);
+  return { latitude: coord.y, longitude: coord.x };
 };
 
 // 로그인 여부 판단
 exports.isLoggedIn = function (req, res, next) {
   // 로그인하지 않은 경우
   if (!req.session.userid) {
-    return next(new UnauthorizedError('Login required'));
+    return res.status(successCode.OK).json({ message: 'LOGIN_REQUIRED' });
   }
   // 현재 로그인한 상태라면
   next();
@@ -129,7 +130,8 @@ exports.generateRandomPassword = () => {
   const chars =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz!@#$%^&*';
   const stringLength = 12;
-  const passwordRegExp = /^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^*()\-_=+\\\|\[\]{};:\'",.<>\/?])*.{8,16}$/;
+  const passwordRegExp =
+    /^(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^*()\-_=+\\\|\[\]{};:\'",.<>\/?])*.{8,16}$/;
 
   var randomString = '';
   for (let i = 0; i < stringLength; i++) {

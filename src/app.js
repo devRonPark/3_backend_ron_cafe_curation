@@ -4,8 +4,8 @@ require('dotenv').config();
 const session = require('express-session');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 const sessionStore = require('./config/sessionStore');
-const { addLogout } = require('./lib/util');
 const { errorCode } = require('./lib/statusCodes/statusCode');
 const { deleteImage } = require('./lib/middlewares/ImageDelete');
 const ValidationError = require('./lib/errors/validation.error');
@@ -36,29 +36,36 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET_KEY,
     store: sessionStore,
-    resave: false, 
-    saveUninitialized: false,
+    resave: false,
+    saveUninitialized: true, // true일 경우, 모든 요청에 대해 session 이 새로 생성되어 session 스토어에 저장된다.
     cookie: {
       secure: false,
-      httpOnly: true
-    }
+      httpOnly: true,
+    },
+    name: 'sessionID',
   }),
   // json request body 파싱
   express.json(),
   // url을 통해 전달되는 데이터에 한글, 공백 등과 같은 문자가 포함될 경우 제대로 인식되지 않는 문제 해결
-  express.urlencoded({ extended: false }),
+  express.urlencoded({ extended: true }),
   // 쿠키 파서 미들웨어
   cookieParser(process.env.SESSION_SECRET_KEY),
   cors({
     origin: true,
-    credentials: true
+    credentials: true,
   }),
-  addLogout(),
 );
 
-app.get('/', (req, res) => {
-  res.status(200).json('Hello, World');
-});
+console.log(
+  'path.resolve(__dirname): ',
+  path.resolve(__dirname, 'uploads').replace('/src', ''),
+);
+console.log(
+  'path.resolve(__dirname, uploads): ',
+  path.resolve(__dirname, 'uploads'),
+);
+// 이미지 라우팅 설정
+app.use(express.static(path.resolve(__dirname, 'uploads').replace('/src', '')));
 
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);

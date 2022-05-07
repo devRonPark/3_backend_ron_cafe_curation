@@ -12,13 +12,34 @@ const { sendMailRun } = require('../config/smtpTransporter');
 const { deleteImage } = require('../lib/middlewares/ImageDelete');
 const logger = require('../config/logger');
 const Auth = require('../models/auth');
-const { successCode } = require('../lib/statusCodes/statusCode');
+const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
 const pool = require('../config/mysql');
 const NotFoundError = require('../lib/errors/not-found.error');
 const InternalServerError = require('../lib/errors/internal-sever.error');
 const ClientError = require('../lib/errors/client.error.js');
 
 class UserController {
+  static getLoggedInUsername = async (req, res, next) => {
+    const userId = req.session.userid;
+    console.log('userId: ', userId);
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString = 'select name from users where id = ?';
+      const queryParams = [userId];
+      const result = await connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) {
+        throw new NotFoundError('User info does not exist');
+      }
+
+      return res.status(successCode.OK).json(userInfo);
+    } catch (err) {
+      next(err);
+    } finally {
+      connection.release();
+    }
+  };
   // 사용자 정보 조회 컨트롤러
   static getUserInfoById = async (req, res, next) => {
     const reqObj = { ...req.params };
@@ -97,57 +118,93 @@ class UserController {
     }
   };
   // 사용자 검증 후 디비에서 조회된 사용자 정보 응답
-  // @params req.body { name, email, phone_number }
+  // @params req.body { name, email }
   // @returns res.body { id, name, email, phone_number, profile_image_path }
   static getUserInfo = async (req, res, next) => {
     const reqObj = { ...req.body };
-    const { name, email, phone_number } = reqObj;
+    const resObj = {};
+    const { name, email } = reqObj;
 
     const connection = await pool.getConnection();
 
     try {
       const queryString =
-      'select id, name, email, phone_number, profile_image_path from users where name = ? and email = ? and phone_number = ? and deleted_at is null';
-      const queryParams = [name, email, phone_number];
+        'select id, name, email from users where name = ? and email = ? and deleted_at is null';
+      const queryParams = [name, email];
       printSqlLog(queryString, queryParams);
       const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
       if (!userInfo) {
-        throw new NotFoundError('User info not found');
+        resObj.message = 'USER_NOT_EXIST';
+      } else {
+        resObj.user = userInfo;
       }
-      return res.status(successCode.OK).json({ user: userInfo });
-    } catch (err) {
-      next(err);
-    } finally {
       connection.release();
+      return res.status(successCode.OK).json(resObj);
+    } catch (err) {
+      throw new InternalServerError(err.message);
     }
   };
 
   // 아이디 찾기 컨트롤러
-  static getEmail = async function (req, res, next) {
-    const reqObj = {...req.body};
-    const {name } = reqObj;
+  static getEmailByName = async function (req, res, next) {
+    const reqObj = { ...req.body };
+    const resObj = {};
+
+    const { name } = reqObj;
     const connection = await pool.getConnection();
 
     try {
       const queryString =
-        'select email from users where name = ? and deleted_at is null';
+        'select name, email from users where name = ? and deleted_at is null';
       const queryParams = [name];
       const result = await connection.query(queryString, queryParams);
       const userInfo = result[0][0];
-      if (!userInfo) throw new NotFoundError('User info does not exist');
-      logger.info('User info exists');
+      if (!userInfo) {
+        resObj.message = 'USER_NOT_EXIST';
+      } else {
+        logger.info('User info exists');
+        resObj.user = userInfo;
+      }
 
-      return res.status(successCode.OK).json({ email: userInfo.email });
+      connection.release();
+      return res.status(successCode.OK).json(resObj);
+    } catch (err) {
+      throw new InternalServerError(err.message);
+    }
+  };
+  // userId로 아이디 찾기 컨트롤러
+  static getEmailByUserId = async function (req, res, next) {
+    const reqObj = { ...req.params };
+    const resObj = {};
+
+    let { userId } = reqObj;
+    userId = parseInt(userId, 10);
+
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select email from users where id = ? and deleted_at is null';
+      const queryParams = [userId];
+      const result = await connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) {
+        resObj.message = 'USER_ACCOUNT_NOT_EXIST';
+      } else {
+        logger.info('USER_ACCOUNT_EXISTS');
+        resObj.email = userInfo.email;
+      }
+
+      connection.release();
+      return res.status(successCode.OK).json(resObj);
     } catch (err) {
       next(err);
-    } finally {
-      connection.release();
     }
   };
   static sendEmailForEmail = async (req, res, next) => {
-    const reqObj = {...req.body};
-    const {email} = reqObj;
+    const reqObj = { ...req.body };
+    const { email } = reqObj;
     try {
       // 송신자에게 보낼 메시지 작성
       const message = {
@@ -165,7 +222,7 @@ class UserController {
     } catch (err) {
       throw new InternalServerError(err.message);
     }
-  }
+  };
 
   // 비밀번호 찾기 로직 상, 임시 비밀번호가 포함된 이메일 발송
   static sendEmailForTemporaryPassword = async (email, newPassword) => {
@@ -248,34 +305,25 @@ class UserController {
         throw new InternalServerError('PROFILE_INFO_UPDATE_FAILURE');
       }
       logger.info('Profile image path is updated successfully');
-      return res.sendStatus(successCode.OK);
+      return res.status(successCode.OK).json({ updatedImagePath: image_path });
     } catch (err) {
       next(err);
     } finally {
       connection.release();
     }
   };
-  // 사용자 이름 및 휴대폰 정보 수정
+  // 사용자 닉네임 수정
   static updateNameAndPhoneNumber = async (req, res, next) => {
     const reqObj = { ...req.params, ...req.body };
-    let { userId, phone_number, name } = reqObj;
+    let { userId, name } = reqObj;
     userId = parseInt(userId, 10);
     const connection = await pool.getConnection();
 
     try {
       const queryString =
-        phone_number && name
-          ? 'update users set name = ?, phone_number = ?, updated_at = ? where id = ?'
-          : !phone_number
-          ? 'update users set name = ?, updated_at = ? where id = ?'
-          : 'update users set phone_number = ?, updated_at = ? where id = ?';
+        'update users set name = ?, updated_at = ? where id = ?';
       const updated_at = printCurrentTime();
-      const queryParams =
-        phone_number && name
-          ? [name, phone_number, updated_at, userId]
-          : !phone_number
-          ? [name, updated_at, userId]
-          : [phone_number, updated_at, userId];
+      const queryParams = [name, updated_at, userId];
       printSqlLog(queryString, queryParams);
       const result = await connection.execute(queryString, queryParams);
       const isUserInfoUpdated = result[0].affectedRows > 0;
@@ -284,7 +332,7 @@ class UserController {
       }
 
       logger.info('User info is updated');
-      return res.sendStatus(successCode.OK);
+      return res.status(successCode.OK).json({ updatedNickname: name });
     } catch (err) {
       next(err);
     } finally {
@@ -327,6 +375,7 @@ class UserController {
         html: `
           <p>비밀번호 초기화를 위해서는 아래의 URL 을 클릭해 주세요.</p>
           <a href="http://localhost:3000/users/${userId}/reset-password/${tokenVal}">👉클릭</a>
+          <p>위 링크는 10분 간만 유효합니다.</p>
         `,
       };
       const isMailSent = await sendMailRun(message); // 메일 발송
@@ -337,19 +386,26 @@ class UserController {
       next(err);
     }
   };
+  // 비밀번호 업데이트
   static updateNewPassword = async (req, res, next) => {
     const reqObj = { ...req.params, ...req.body };
+    const resObj = {};
+
     let { userId, token, current_password, new_password } = reqObj;
     userId = parseInt(userId, 10);
+
+    const currentTime = printCurrentTime();
     const queryString = {
-      checkTokenExist: 'select count(0) from auth where token_value = ?',
+      // 토큰 유효 기한이 아직 유효한지까지도 검증
+      checkTokenValid:
+        'select count(0) from auth_email where ae_value = ? and expired_at > ?',
       getPwdInDb:
         'select password from users where id = ? and deleted_at is null',
       updateNewPwd:
         'update users set password = ?, updated_at = ? where id = ? and deleted_at is null',
     };
     const queryParams = {
-      checkTokenExist: [token],
+      checkTokenValid: [token, currentTime],
       getPwdInDb: [userId],
       updateNewPwd: [],
     };
@@ -360,15 +416,20 @@ class UserController {
 
     try {
       // token_value로 token 일치 여부 파악
-      printSqlLog(queryString.checkTokenExist, queryParams.checkTokenExist);
-      result.checkTokenExist = await connection.query(
-        queryString.checkTokenExist,
-        queryParams.checkTokenExist,
+      printSqlLog(queryString.checkTokenValid, queryParams.checkTokenValid);
+      result.checkTokenValid = await connection.query(
+        queryString.checkTokenValid,
+        queryParams.checkTokenValid,
       );
-      const isTokenSame = result.checkTokenExist[0][0]['count(0)'] > 0;
-      if (!isTokenSame)
-        throw new InternalServerError('Token is not the same in db');
-      logger.info('token is same');
+      const isTokenValid = result.checkTokenValid[0][0]['count(0)'] > 0;
+      // 토큰이 만료된 경우
+      if (!isTokenValid) {
+        resObj.message = 'TOKEN_IS_EXPIRED';
+        return res.status(errorCode.UNAUTHORIZED).json(resObj);
+      }
+
+      logger.info('token is valid');
+
       // token이 일치하면, userId로 db에 저장된 password 불러오기
       printSqlLog(queryString.getPwdInDb, queryParams.getPwdInDb);
       result.getPwdInDb = await connection.query(
@@ -376,35 +437,46 @@ class UserController {
         queryParams.getPwdInDb,
       );
       const pwdInDb = result.getPwdInDb[0][0].password;
-      if (!pwdInDb)
-        throw new InternalServerError('Password of user does not exist');
-      logger.info('Password of user exist');
+
       // passwordInDb와 currentPassword 일치 여부 파악
       const isPwdMatch = await bcrypt.compare(current_password, pwdInDb);
-      if (!isPwdMatch) throw new ClientError('password is wrong');
-      logger.info('Password is same');
+      if (!isPwdMatch) {
+        resObj.message = 'PASSWORD_IS_WRONG';
+        return res.status(successCode.OK).json(resObj);
+      }
+
       // 비밀번호가 일치하면, 입력된 newPassword 암호화
       const saltRounds = 10;
       const salt = bcrypt.genSaltSync(saltRounds);
       const encryptedPassword = bcrypt.hashSync(new_password, salt);
       logger.info('New password is encrypted');
+
       // 암호화된 newPassword를 db에 업데이트
       const updated_at = printCurrentTime();
       queryParams.updateNewPwd = [encryptedPassword, updated_at, userId];
-      console.log('queryParams: ', queryParams.updateNewPwd);
       printSqlLog(queryString.updateNewPwd, queryParams.updateNewPwd);
       result.updateNewPwd = await connection.execute(
         queryString.updateNewPwd,
         queryParams.updateNewPwd,
       );
-      console.log(result.updateNewPwd);
       const isNewPwdUpdated = result.updateNewPwd[0].affectedRows > 0;
-      console.log('isNewPwdUpdated: ', isNewPwdUpdated);
       if (!isNewPwdUpdated)
         throw new InternalServerError('New password updated fail');
       logger.info('New password is updated');
 
+      // 사용자가 현재 로그인한 상태라면 새로 업데이트된 비밀번호로 로그인하도록 로그아웃 처리
+      if (req.session.userid) {
+        req.session.destroy(err => {
+          console.log(
+            'session object is deleted successfully in session store',
+          );
+          res.clearCookie('sessionID');
+          res.clearCookie('userid');
+        });
+      }
+
       await connection.commit();
+      connection.release();
       return res.sendStatus(successCode.OK);
     } catch (err) {
       await connection.rollback();
@@ -420,9 +492,8 @@ class UserController {
       // auth 테이블에 저장할 토큰 정보 가공
       const data = {
         // 데이터 정리
+        email: req.body.email,
         token_value: token,
-        user_id: req.session.userid,
-        time_to_live: 300, // 토큰 유효기한 설정(5분)
       };
       const isTokenSaved = await Auth.saveToken(data);
       if (!isTokenSaved) throw new InternalServerError('Token save fail');
@@ -434,91 +505,94 @@ class UserController {
   };
   // 사용자 탈퇴 컨트롤러
   static deleteUser = async (req, res, next) => {
-    const userId = req.params.userId;
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'update users set deleted_at = ? where id = ? and deleted_at is null';
-      const deleted_at = printCurrentTime();
-      const queryParams = [deleted_at, userId];
-      const result = connection.execute(queryString, queryParams);
-      const isUserDeleted = result[0].affectedRows > 0;
-      if (!isUserDeleted) {
-        throw new InternalServerError('User is not deleted');
-      }
-
-      // 사용자 탈퇴에 따른 현재 활성화된 로그인 세션 삭제
-      req.logout();
-      return res.sendStatus(successCode.OK);
-    } catch (err) {
-      next(err);
-    } finally {
-      connection.release();
-    }
-  };
-  // 사용자가 작성한 모든 댓글 목록 조회
-  // 필요 정보 : 카페 이름, 배경 이미지, 댓글
-  static getReviewsByUserId = async (req, res, next) => {
     const reqObj = { ...req.params };
     const resObj = {};
-    const { userId } = reqObj;
+
+    let { userId } = reqObj;
+    userId = parseInt(userId, 10);
+
     const queryString = {
-      comments: 'select cafe_id, comment from reviews where user_id=?',
-      cafes:
-        'select id, name, jibun_address, image_path from cafes where cafe_id=?',
+      users:
+        'update users set deleted_at = ? where id = ? and deleted_at is null',
+      likes:
+        'update likes set deleted_at = ? where user_id = ? and deleted_at is null',
+      reviews:
+        'update reviews set deleted_at = ? where user_id = ? and deleted_at is null',
     };
-    const queryParams = {
-      comments: [],
-      cafes: [],
-    };
-    const result = {
-      comments: [],
-      cafes: [],
-    };
+
     const connection = await pool.getConnection();
     connection.beginTransaction();
-
     try {
-      // 먼저 reviews 테이블에서 cafe_id와 comment 가져오기
-      queryParams.comments.push(userId);
-      // result.comments[0] => [{cafe_id: 1, comment:"아주 멋있는 카페" }, {cafe_id: 2, comment:"분위기 좋은 카페" }, {cafe_id: 3, comment:"공부하기 좋은 카페" }]
-      const result = await connection.query(
-        queryString.comments,
-        queryParams.comments,
+      const deleted_at = printCurrentTime();
+      const queryParams = [deleted_at, userId];
+      const resultOfUsers = await connection.execute(
+        queryString.users,
+        queryParams,
       );
-      if (result[0].length === 0) {
-        next(new NotFoundError('Comment data does not exist'));
+      const isUserDeleted = resultOfUsers[0].affectedRows > 0;
+      if (isUserDeleted) {
+        logger.info('USER_DELETE_SUCCESS');
+        resObj['deleted_at'] = deleted_at;
       }
-      logger.info(`${result[0].length} comment data is searched!`);
-      const commentList = result.comments[0];
-      result.comments = commentList;
-      // 이전에 조회한 cafe_id 로 cafes 테이블에서 name, jibun_address, image_path 가져오기
-      for (let i = 0; i < commentList.length; i++) {
-        queryParams.cafes = [commentList[i].cafe_id];
-        // result[0] => [{name: , jibun_address, image_path: }]
-        const result = await connection.query(
-          queryString.cafes,
-          queryParams.cafes,
-        );
-        if (result[0].length === 0) {
-          next(new NotFoundError('Cafe info does not exist'));
-        }
-        logger.info(`CafeId ${commentList[i].cafe_id}'s data is searched!`);
-        const cafeInfo = result[0];
-        result.cafes.push(cafeInfo);
-      }
-      resObj.commentData = result.comments;
-      resObj.cafeData = result.cafes;
-      await connection.commit();
 
+      const resultOfLikes = await connection.execute(
+        queryString.likes,
+        queryParams,
+      );
+      const isLikesDeleted = resultOfLikes[0].affectedRows > 0;
+
+      if (isLikesDeleted) logger.info('LIKE_DATA_EXIST_AND_DELETED');
+      const resultOfReviews = await connection.execute(
+        queryString.reviews,
+        queryParams,
+      );
+      const isReviewsDeleted = resultOfReviews[0].affectedRows > 0;
+      if (isReviewsDeleted) logger.info('LIKE_DATA_EXIST_AND_DELETED');
+
+      await connection.commit();
+      // 사용자 탈퇴에 따른 현재 활성화된 로그인 세션 삭제
+      req.session.destroy(err => {
+        console.log('session object is deleted successfully in session store');
+        res.clearCookie('sessionID');
+        res.clearCookie('userid');
+      });
+      // 사용자 회원 탈퇴 시에 사용자가 남긴 좋아요 및 리뷰 정보들 또한 전부 deleted_at 처리해야 하는 건가?
       return res.status(successCode.OK).json(resObj);
     } catch (err) {
       await connection.rollback();
       throw new InternalServerError(err.message);
     } finally {
       connection.release();
+    }
+  };
+  // 사용자가 작성한 모든 리뷰 정보 조회
+  static getReviewsByUserId = async (req, res, next) => {
+    const reqObj = { ...req.params };
+    const resObj = {};
+    let { userId } = reqObj;
+    userId = parseInt(userId, 10);
+
+    const connection = await pool.getConnection();
+
+    try {
+      // userid 로 review 조회
+      // inner join
+      const queryString =
+        'select r.id as review_id, r.cafe_id, r.ratings, r.comment, r.created_at, r.updated_at, c.name as cafe_name, u.name as user_name, u.profile_image_path from reviews as r join users as u on r.user_id = ? and r.deleted_at is null and r.user_id = u.id join cafes as c on c.id = r.cafe_id';
+      const queryParams = [userId];
+      printSqlLog(queryString, queryParams);
+      const result = await connection.query(queryString, queryParams);
+      const reviewCount = result[0].length;
+      if (reviewCount < 1) {
+        resObj.message = 'MY_CAFE_REVIEWS_NOT_EXIST';
+        return res.status(successCode.OK).json(resObj);
+      }
+
+      resObj.reviews = result[0];
+      connection.release();
+      return res.status(successCode.OK).json(resObj);
+    } catch (err) {
+      throw new InternalServerError(err.message);
     }
   };
   // 사용자가 좋아요 누른 카페 정보 조회
@@ -531,57 +605,66 @@ class UserController {
     // 검색 조건 :
     // likes 테이블에서 userId 로 cafeId 조회
     // 조회된 cafeId 로 정보 가져오기
-    const queryString = {
-      likes: 'select cafe_id from likes where user_id=?',
-      cafes:
-        'select cafe_id, name, jibun_address, image_path from cafes where cafe_id=?',
-    };
-    const queryParams = {
-      likes: [userId],
-      cafes: [],
-    };
-    const result = {
-      likes: [],
-      cafes: [],
-    };
     const connection = await pool.getConnection();
-    connection.beginTransaction();
 
     try {
-      const result = await connection.query(
-        queryString.likes,
-        queryParams.likes,
-      );
-      if (result[0].length === 0) {
-        next(new NotFoundError('Likes data does not exist'));
+      const queryString =
+        'select l.cafe_id, c.name as cafe_name, c.jibun_address, c.image_path from likes as l join cafes as c on l.user_id = ? and l.deleted_at is null and l.cafe_id = c.id';
+      const queryParams = [userId];
+      printSqlLog(queryString, queryParams);
+      const result = await connection.query(queryString, queryParams);
+      const likeCafeCount = result[0].length;
+      if (likeCafeCount < 1) {
+        resObj.message = 'MY_LIKE_CAFES_NOT_EXIST';
+        return res.status(successCode.OK).json(resObj);
       }
-      logger.info(`${result[0].length} likes data is searched!`);
-      const likeCafeList = result[0];
-      result.likes = likeCafeList;
-      // 이전에 조회한 cafe_id 로 cafes 테이블에서 name, jibun_address, image_path 가져오기
-      for (let i = 0; i < likeCafeList.length; i++) {
-        queryParams.cafes = [likeCafeList[i].cafe_id];
-        // result[0] => [{name: , jibun_address, image_path: }]
-        const result = await connection.query(
-          queryString.cafes,
-          queryParams.cafes,
-        );
-        if (result[0].length === 0) {
-          next(new NotFoundError('Cafe info does not exist'));
-        }
-        logger.info(`CafeId ${commentList[i].cafe_id}'s data is searched!`);
-        const cafeInfo = result[0];
-        result.cafes.push(cafeInfo);
-      }
-      resObj.cafeData = result.cafes;
-      await connection.commit();
-
+      logger.info(`[UserId: ${userId}] Like cafes exist`);
+      resObj.likes = result[0];
+      connection.release();
       return res.status(successCode.OK).json(resObj);
     } catch (err) {
-      await connection.rollback();
       throw new InternalServerError(err.message);
-    } finally {
+    }
+  };
+
+  static checkIsPwdSame = async (req, res) => {
+    const reqObj = { ...req.params, ...req.body };
+    const resObj = {};
+
+    let { userId, password } = reqObj;
+    userId = parseInt(userId, 10);
+    console.log('userId: ', userId);
+    console.log('passwordInBody: ', password);
+
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select password from users where id = ? and deleted_at is null';
+      const queryParams = [userId];
+      printSqlLog(queryString, queryParams);
+      const result = await connection.query(queryString, queryParams);
+      const userInfo = result[0][0];
+      if (!userInfo) {
+        resObj.message = 'USER_NOT_EXIST';
+      } else {
+        // 비밀번호 일치 여부 검증
+        const passwordInDb = result[0][0].password;
+        console.log('passwordInDb: ', passwordInDb);
+        const isPwdMatch = await bcrypt.compare(password, passwordInDb);
+
+        if (!isPwdMatch) {
+          resObj.isPwdMatch = false;
+          logger.info('PASSWORD_NOT_SAME');
+        } else {
+          resObj.isPwdMatch = true;
+          logger.info('PASSWORD_IS_SAME');
+        }
+      }
       connection.release();
+      return res.status(successCode.OK).json(resObj);
+    } catch (err) {
+      throw new InternalServerError(err.message);
     }
   };
 }

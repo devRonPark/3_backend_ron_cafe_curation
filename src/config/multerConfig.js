@@ -4,7 +4,7 @@ const multerConfig = multer => {
   const storage = multer.diskStorage({
     // 저장될 폴더 경로 지정
     destination: (req, file, cb) => {
-      cb(null, 'uploads/images');
+      cb(null, 'uploads');
     },
     // 파일 이름 설정
     filename: (req, file, cb) => {
