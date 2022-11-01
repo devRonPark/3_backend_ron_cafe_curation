@@ -99,3 +99,35 @@
 
 ## 프로젝트 설계
 <p align="center"><img width="80%" src="https://user-images.githubusercontent.com/57528803/199349753-38389b67-c692-4ef9-89fe-7fa74ee0c96f.png" /></p>
+
+
+## 트러블 슈팅 경험
+[mysql 모듈 사용 시 콜백 지옥 발생](https://rift-crabapple-418.notion.site/mysql-bccf2a1263a0425092ebe50b0c2e9d05)
+
+[forEach 함수에서의 비동기 콜백 처리](https://rift-crabapple-418.notion.site/forEach-f81854a151ee447abfea27ce96575f32)
+
+[비동기 라우터 핸들러의 Unhandled Promise Rejection Warning 에러](https://rift-crabapple-418.notion.site/async-Unhandled-Promise-Rejection-Warning-2c4e0ed68b804df4b7b2094abbfef374)
+
+[라우터 선언 우선순위](https://rift-crabapple-418.notion.site/9ade091bbaf84781b20a3758eba050a5)
+
+[connection pool 사용](https://rift-crabapple-418.notion.site/connection-pool-ab405bc87d384a63846b99b96fe1ee8b)
+
+[공공 API 로부터 받아온 위도, 경도 데이터의 기준 좌표계 변환](https://rift-crabapple-418.notion.site/API-f22f993984d345e2bf715edc2befc03d)
+
+[공공 API 호출 제한 문제](https://rift-crabapple-418.notion.site/API-3bb260469f72425bb87727b5376840ca)
+
+## 개선점
+
+1. (관심사 분리 원칙 적용) 라우터 별 서비스 로직 중 DB와 통신하는 로직은 모델로 분리
+
+2. 반복되는 try-catch 문 줄이기
+
+3. 서버의 보안성을 향상하기 위해 Helmet.js 미들웨어 적용
+
+## 적용하고 싶은 부분
+
+1. Docker 기반 배포 환경 구성
+
+2. 컨트롤러, 서비스, 모델 별 단위 테스트 코드 작성
+
+3. github actions, jenkins 기반 CI/CD 구축
