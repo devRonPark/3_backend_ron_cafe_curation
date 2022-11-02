@@ -8,6 +8,8 @@
 
 서울의 경우 카페 방문자들 중 공부하거나 일을 하는 사람들(이른바 카공족, 저를 포함)의 비율이 높습니다. **JJINCAFE IN SEOUL**은 이들에게 초점을 맞추어 출발한 웹 프로젝트입니다.
 
+👉 [바로가기](https://jjincafe-in-seoul.com)
+
 ## 🛠 개발 환경 및 사용 기술
 
 <p align="center"><img width="80%" src="https://user-images.githubusercontent.com/57528803/199348190-66729db1-3feb-48c1-9e11-ae5486f35529.png" /></p>
