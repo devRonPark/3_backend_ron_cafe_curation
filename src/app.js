@@ -72,13 +72,6 @@ app.use('/api/users', userRouter);
 app.use('/api/cafes', cafeRouter);
 app.use('/api/admin', adminRouter);
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  const err = new Error('Not Found');
-  err.status = errorCode.NOT_FOUND;
-  next(err);
-});
-
 // error handlers
 // select 로 조회 시 검색된 데이터가 없을 경우 NotFoundError 발생
 app.use(function handleNotFoundError(err, req, res, next) {

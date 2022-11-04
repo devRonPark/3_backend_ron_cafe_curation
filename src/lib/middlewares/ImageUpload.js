@@ -8,11 +8,11 @@ const ClientError = require('../errors/client.error.js');
 
 const upload = multerConfig(multer);
 
-exports.uploadImage = function (req, res, next) {
+exports.uploadImage = (req, res, next) => {
   // fieldname 이 'image' 와 일치할 때 파일 업로드 진행
   const imageUpload = upload.single('image_path');
 
-  imageUpload(req, res, function (err) {
+  imageUpload(req, res, (err) => {
     console.log('req.file: ', req.file);
     console.error('error: ', err);
     if (err instanceof multer.MulterError) {

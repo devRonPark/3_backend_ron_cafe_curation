@@ -16,7 +16,7 @@ const InternalServerError = require('../lib/errors/internal-sever.error');
 
 class CafeController {
   // 페이지 별 카페 데이터 조회
-  static getCafeDataByPage = async function (req, res, next) {
+  static getCafeDataByPage = async (req, res, next) => {
     const currentPage = req.query.page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
     const queryString = {

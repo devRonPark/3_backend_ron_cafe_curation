@@ -246,7 +246,7 @@ class CafeInfoValidator {
     next();
   };
   // 유효성 검사 이후 에러 체크
-  static validateCallback = function (req, res, next) {
+  static validateCallback = (req, res, next) => {
     // validate the data to be submitted
     const result = validationResult(req);
     const hasErrors = !result.isEmpty();

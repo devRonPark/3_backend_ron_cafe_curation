@@ -147,7 +147,7 @@ class UserController {
   };
 
   // 아이디 찾기 컨트롤러
-  static getEmailByName = async function (req, res, next) {
+  static getEmailByName = async (req, res, next) => {
     const reqObj = { ...req.body };
     const resObj = {};
 
@@ -174,7 +174,7 @@ class UserController {
     }
   };
   // userId로 아이디 찾기 컨트롤러
-  static getEmailByUserId = async function (req, res, next) {
+  static getEmailByUserId = async (req, res, next) => {
     const reqObj = { ...req.params };
     const resObj = {};
 
@@ -246,7 +246,7 @@ class UserController {
     }
   };
   // 비밀번호 찾기 라우터 로직
-  static sendEmailWithNewPassword = async function (req, res, next) {
+  static sendEmailWithNewPassword = async (req, res, next) => {
     const reqObj = { ...req.body };
     const { id, email } = reqObj;
 
@@ -339,7 +339,7 @@ class UserController {
       connection.release();
     }
   };
-  static sendEmailForNewPassword = async function (req, res, next) {
+  static sendEmailForNewPassword = async (req, res, next) => {
     // 회원 이메일로 링크 전송
     const { email } = req.userInfo;
     try {
@@ -360,7 +360,7 @@ class UserController {
     }
   };
   // 비밀번호 초기화 메일 발송
-  static sendPasswordInitMail = async function (req, res, next) {
+  static sendPasswordInitMail = async (req, res, next) => {
     try {
       const { email } = req.body;
       const { userId } = req.params;
@@ -486,7 +486,7 @@ class UserController {
     }
   };
 
-  static getTokenAfterDbSave = async function (req) {
+  static getTokenAfterDbSave = async (req) => {
     try {
       const token = generateRandomToken(); // 토큰 생성
       // auth 테이블에 저장할 토큰 정보 가공

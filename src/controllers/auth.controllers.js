@@ -86,7 +86,7 @@ class AuthController {
     }
   };
   // 회원가입 컨트롤러
-  static createUser = async function (req, res, next) {
+  static createUser = async (req, res, next) => {
     const reqObj = { ...req.body };
     const { name, image_path, email, password } = reqObj;
 
@@ -111,7 +111,7 @@ class AuthController {
     }
   };
   // 로그인 시 사용자 인증
-  static authenticate = async function (req, res, next) {
+  static authenticate = async (req, res, next) => {
     const reqObj = { ...req.body };
     const resObj = {};
     const { email, password, isAutoLoginChecked } = reqObj;
@@ -178,7 +178,7 @@ class AuthController {
     }
   };
   // 사용자 로그아웃
-  static logout = function (req, res, next) {
+  static logout = (req, res, next) => {
     req.session.destroy(err => {
       console.log('session object is deleted successfully in session store');
       res.clearCookie('sessionID');
@@ -186,7 +186,7 @@ class AuthController {
     });
   };
   // 이메일 인증을 위한 6자리 인증번호를 포함한 메일 발송
-  static authEmail = async function (req, res) {
+  static authEmail = async (req, res) => {
     try {
       // 회원가입 시 사용자가 입력한 이메일 주소
       const { email } = req.body;
