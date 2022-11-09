@@ -11,7 +11,7 @@ const {
 const { sendMailRun } = require('../config/smtpTransporter');
 const { deleteImage } = require('../lib/middlewares/ImageDelete');
 const logger = require('../config/logger');
-const Auth = require('../models/auth');
+const Auth = require('../models/auth.model');
 const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
 const pool = require('../config/mysql');
 const NotFoundError = require('../lib/errors/not-found.error');
@@ -486,7 +486,7 @@ class UserController {
     }
   };
 
-  static getTokenAfterDbSave = async (req) => {
+  static getTokenAfterDbSave = async req => {
     try {
       const token = generateRandomToken(); // 토큰 생성
       // auth 테이블에 저장할 토큰 정보 가공

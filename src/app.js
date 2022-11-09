@@ -8,13 +8,15 @@ const path = require('path');
 const sessionStore = require('./config/sessionStore');
 const { errorCode } = require('./lib/statusCodes/statusCode');
 const { deleteImage } = require('./lib/middlewares/ImageDelete');
-const ValidationError = require('./lib/errors/validation.error');
-const AlreadyInUseError = require('./lib/errors/already-in-use.error');
-const NotFoundError = require('./lib/errors/not-found.error');
-const MySqlError = require('./lib/errors/mysql.error');
-const ClientError = require('./lib/errors/client.error.js');
-const InternalServerError = require('./lib/errors/internal-sever.error');
-const UnauthorizedError = require('./lib/errors/unauthorized.error');
+const {
+  ValidationError,
+  AlreadyInUseError,
+  NotFoundError,
+  MySqlError,
+  ClientError,
+  InternalServerError,
+  UnauthorizedError,
+} = require('./lib/errors');
 
 const adminRouter = require('./routes/admin.routes');
 const userRouter = require('./routes/user.routes');

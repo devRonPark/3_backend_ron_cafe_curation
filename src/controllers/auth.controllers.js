@@ -1,15 +1,16 @@
 const logger = require('../config/logger');
 const bcrypt = require('bcrypt');
 const moment = require('moment');
-const { successCode } = require('../lib/statusCodes/statusCode');
+const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
 const { generateRandomNumber, printSqlLog } = require('../lib/util');
 const { sendMailRun } = require('../config/smtpTransporter');
 const InternalServerError = require('../lib/errors/internal-sever.error');
 const NotFoundError = require('../lib/errors/not-found.error');
-const ClientError = require('../lib/errors/client.error.js');
 const AlreadyInUseError = require('../lib/errors/already-in-use.error');
 const pool = require('../config/mysql');
 const { convertToDateTimeFormat } = require('../lib/util');
+const AuthModel = require('../models/auth.model');
+const { messages } = require('../lib/errors/message');
 
 class AuthController {
   // 로그인 시 사용자 존재 여부 검사
@@ -87,29 +88,11 @@ class AuthController {
   };
   // 회원가입 컨트롤러
   static createUser = async (req, res, next) => {
-    const reqObj = { ...req.body };
-    const { name, image_path, email, password } = reqObj;
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'insert into users (name, profile_image_path, email, password) values (?,?,?,?)';
-      const queryParams = [name, image_path, email, password];
-      const result = await connection.execute(queryString, queryParams);
-      if (result[0].affectedRows === 0) {
-        throw new InternalServerError('User register fail');
-      }
-      logger.info('User register success');
-      // TODO 회원가입 성공 시, 중복 요청에 대한 처리 필요
-      return res.sendStatus(successCode.CREATED);
-    } catch (err) {
-      // TODO 회원가입 실패 시, 중복 요청에 대한 처리 필요
-      throw err;
-    } finally {
-      connection.release();
-    }
+    const result = await AuthModel.saveNewUser(req.body);
+    if (result === 500) throw new InternalServerError(messages[500]);
+    return res.sendStatus(successCode.CREATED);
   };
+
   // 로그인 시 사용자 인증
   static authenticate = async (req, res, next) => {
     const reqObj = { ...req.body };
