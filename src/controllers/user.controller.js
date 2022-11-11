@@ -9,7 +9,6 @@ const {
   printSqlLog,
 } = require('../lib/util');
 const { sendMailRun } = require('../config/smtpTransporter');
-const { deleteImage } = require('../lib/middlewares/ImageDelete');
 const logger = require('../config/logger');
 const Auth = require('../models/auth.model');
 const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
@@ -17,6 +16,9 @@ const pool = require('../config/mysql');
 const NotFoundError = require('../lib/errors/not-found.error');
 const InternalServerError = require('../lib/errors/internal-sever.error');
 const ClientError = require('../lib/errors/client.error.js');
+const config = require('../config/config');
+const UserModel = require('../models/user.model');
+const messages = require('../lib/errors/message');
 
 class UserController {
   static getLoggedInUsername = async (req, res, next) => {
@@ -45,24 +47,12 @@ class UserController {
     const reqObj = { ...req.params };
     const { userId } = reqObj;
 
-    const connection = await pool.getConnection();
+    const result = await UserModel.findUserById(userId);
 
-    try {
-      const queryString =
-        'select name, email, phone_number, profile_image_path from users where id = ?';
-      const queryParams = [userId];
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
+    if (result == 500) next(new InternalServerError(messages[500]));
+    else if (result == 404) next(new NotFoundError(messages[404]));
 
-      if (!userInfo) {
-        throw new NotFoundError('User info does not exist');
-      }
-      return res.status(successCode.OK).json({ ...userInfo });
-    } catch (err) {
-      next(err);
-    } finally {
-      connection.release();
-    }
+    return res.status(successCode.OK).json(result);
   };
   static getUserId = async (req, res, next) => {
     const reqObj = { ...req.body };
@@ -175,32 +165,10 @@ class UserController {
   };
   // userId로 아이디 찾기 컨트롤러
   static getEmailByUserId = async (req, res, next) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
-
-    let { userId } = reqObj;
-    userId = parseInt(userId, 10);
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'select email from users where id = ? and deleted_at is null';
-      const queryParams = [userId];
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
-      if (!userInfo) {
-        resObj.message = 'USER_ACCOUNT_NOT_EXIST';
-      } else {
-        logger.info('USER_ACCOUNT_EXISTS');
-        resObj.email = userInfo.email;
-      }
-
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (err) {
-      next(err);
-    }
+    const result = UserModel.findUserById(parseInt(req.params.userId, 10));
+    if (result == 500) next(new InternalServerError(messages[500]));
+    else if (result == 404) next(new NotFoundError(messages[404]));
+    return res.status(successCode.OK).json({ email: result.email });
   };
   static sendEmailForEmail = async (req, res, next) => {
     const reqObj = { ...req.body };
@@ -208,7 +176,7 @@ class UserController {
     try {
       // 송신자에게 보낼 메시지 작성
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 아이디 찾기 결과',
         html: `
@@ -229,7 +197,7 @@ class UserController {
     try {
       // 송신자에게 보낼 메시지 작성
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 로그인 임시 패스워드 발급',
         html: `
@@ -345,7 +313,7 @@ class UserController {
     try {
       // 송신자에게 보낼 메시지 작성
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 비밀번호 초기화 메일',
         html: `
@@ -369,7 +337,7 @@ class UserController {
 
       // 송신자에게 보낼 메시지 작성
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 비밀번호 초기화 메일',
         html: `
