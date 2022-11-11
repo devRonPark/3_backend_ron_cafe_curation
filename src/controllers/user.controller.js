@@ -19,6 +19,7 @@ const ClientError = require('../lib/errors/client.error.js');
 const config = require('../config/config');
 const UserModel = require('../models/user.model');
 const messages = require('../lib/errors/message');
+const { findUserOption } = require('../lib/constants');
 
 class UserController {
   static getLoggedInUsername = async (req, res, next) => {
@@ -44,10 +45,10 @@ class UserController {
   };
   // 사용자 정보 조회 컨트롤러
   static getUserInfoById = async (req, res, next) => {
-    const reqObj = { ...req.params };
-    const { userId } = reqObj;
-
-    const result = await UserModel.findUserById(userId);
+    const result = await UserModel.findUserByType(
+      findUserOption.id,
+      parseInt(req.params.userId, 10),
+    );
 
     if (result == 500) next(new InternalServerError(messages[500]));
     else if (result == 404) next(new NotFoundError(messages[404]));
@@ -138,34 +139,21 @@ class UserController {
 
   // 아이디 찾기 컨트롤러
   static getEmailByName = async (req, res, next) => {
-    const reqObj = { ...req.body };
-    const resObj = {};
+    const result = await UserModel.findUserByType(
+      findUserOption.name,
+      req.body.name,
+    );
+    if (result == 500) return next(new InternalServerError(messages[500]));
+    else if (result === 404) return next(new NotFoundError(messages[404]));
 
-    const { name } = reqObj;
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'select name, email from users where name = ? and deleted_at is null';
-      const queryParams = [name];
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
-      if (!userInfo) {
-        resObj.message = 'USER_NOT_EXIST';
-      } else {
-        logger.info('User info exists');
-        resObj.user = userInfo;
-      }
-
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (err) {
-      throw new InternalServerError(err.message);
-    }
+    return res.status(successCode.OK).json(result);
   };
   // userId로 아이디 찾기 컨트롤러
   static getEmailByUserId = async (req, res, next) => {
-    const result = UserModel.findUserById(parseInt(req.params.userId, 10));
+    const result = await UserModel.findUserByType(
+      findUserOption.id,
+      parseInt(req.params.userId, 10),
+    );
     if (result == 500) next(new InternalServerError(messages[500]));
     else if (result == 404) next(new NotFoundError(messages[404]));
     return res.status(successCode.OK).json({ email: result.email });

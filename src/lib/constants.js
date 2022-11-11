@@ -25,3 +25,5 @@ exports.guListInSeoul = [
   '중구',
   '중랑구',
 ];
+
+exports.findUserOption = { id: 'id', name: 'name' };

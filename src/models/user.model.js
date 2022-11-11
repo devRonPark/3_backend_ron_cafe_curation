@@ -1,17 +1,20 @@
+const logger = require('../config/logger');
+const pool = require('../config/mysql');
+
 class UserModel {
-  static findUserById = async userId => {
+  // option: {id: , name: }
+  static findUserByType = async (type, value) => {
     let result, connection;
     try {
       connection = await pool.getConnection();
-
-      const queryString =
-        'select name, email, phone_number, profile_image_path from users where id = ?';
-      const queryParams = [userId];
+      const queryString = `select name, email, profile_image_path from users where ${type} = ?`;
+      const queryParams = [value];
       const [resultOfQuery] = await connection.query(queryString, queryParams);
       if (!resultOfQuery[0]) result = 404;
       else result = resultOfQuery[0];
       return result;
     } catch (err) {
+      logger.error(err);
       result = 500;
       return result;
     } finally {
