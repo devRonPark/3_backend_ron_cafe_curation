@@ -47,20 +47,22 @@ class AuthModel {
   // @param userInfo: {name, image_path, email, password}
   static saveNewUser = async userInfo => {
     let result = 0;
-    const connection = await pool.getConnection(async conn => conn);
-
+    const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
-      const {name, image_path, email, password} = userInfo;
+      const { name, image_path, email, password } = userInfo;
       const queryString =
-      'insert into users (name, profile_image_path, email, password) values (?,?,?,?)';
-    const queryParams = [name, image_path, email, password];
-    const resultOfQuery = await connection.execute(queryString, queryParams);
-    if (resultOfQuery[0].affectedRows === 0) result = 500;
-    else result = 201;
+        'insert into users (name, profile_image_path, email, password) values (?,?,?,?)';
+      const queryParams = [name, image_path, email, password];
+      const resultOfQuery = await connection.execute(queryString, queryParams);
+      console.log(resultOfQuery[0]);
+      if (resultOfQuery[0].affectedRows === 0) result = 500;
+      else result = 201;
 
-    return result;
+      await connection.commit();
+
+      return result;
     } catch (err) {
       await connection.rollback();
       result = 500;
@@ -68,7 +70,7 @@ class AuthModel {
     } finally {
       connection.release();
     }
-  }
+  };
 }
 
 module.exports = AuthModel;
