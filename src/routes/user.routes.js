@@ -52,7 +52,7 @@ userRouter.get(
 userRouter.post(
   '/:userId/password',
   [validateUserIdParam, validateCallback],
-  UserController.checkIsPwdSame,
+  UserController.checkIsPasswordSame,
 );
 
 // 사용자 아이디 찾기

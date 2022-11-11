@@ -595,44 +595,30 @@ class UserController {
     }
   };
 
-  static checkIsPwdSame = async (req, res) => {
-    const reqObj = { ...req.params, ...req.body };
-    const resObj = {};
+  isPasswordMatch = async (pwdFromReq, pwdFromDb) => {
+    return await bcrypt.compare(pwdFromReq, pwdFromDb);
+  };
 
-    let { userId, password } = reqObj;
-    userId = parseInt(userId, 10);
-    console.log('userId: ', userId);
-    console.log('passwordInBody: ', password);
-
-    const connection = await pool.getConnection();
+  static checkIsPasswordSame = async (req, res) => {
+    const result = await UserModel.findPasswordById(
+      parseInt(req.params.userId, 10),
+    );
+    if (result == 500) next(new InternalServerError(messages[500]));
+    else if (result == 404) next(new NotFoundError(messages[400]));
 
     try {
-      const queryString =
-        'select password from users where id = ? and deleted_at is null';
-      const queryParams = [userId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
-      if (!userInfo) {
-        resObj.message = 'USER_NOT_EXIST';
+      if (!isPasswordMatch(req.body.password, result[0].password)) {
+        resObj.isPwdMatch = false;
+        logger.info('PASSWORD_NOT_SAME');
       } else {
-        // 비밀번호 일치 여부 검증
-        const passwordInDb = result[0][0].password;
-        console.log('passwordInDb: ', passwordInDb);
-        const isPwdMatch = await bcrypt.compare(password, passwordInDb);
-
-        if (!isPwdMatch) {
-          resObj.isPwdMatch = false;
-          logger.info('PASSWORD_NOT_SAME');
-        } else {
-          resObj.isPwdMatch = true;
-          logger.info('PASSWORD_IS_SAME');
-        }
+        resObj.isPwdMatch = true;
+        logger.info('PASSWORD_IS_SAME');
       }
-      connection.release();
+
       return res.status(successCode.OK).json(resObj);
     } catch (err) {
-      throw new InternalServerError(err.message);
+      logger.error(err);
+      next(new InternalServerError(messages[500]));
     }
   };
 }
