@@ -44,6 +44,20 @@ userRouter.get(
   UserController.getEmailByUserId,
 );
 
+// 회원 정보 수정 페이지
+// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
+// POST /api/users/:userId
+// req.params {userId}, req.body {password}
+// select id, password from users where id = ? and deleted_at is null
+// res.body {userId}
+userRouter.post(
+  '/:userId',
+  [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
+  isLoggedIn, // 사용자 로그인 여부 검증
+  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
+  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
+);
+
 // POST /api/users/:userId/password
 // req.params {userId}
 // req.body {password}
@@ -76,20 +90,6 @@ userRouter.post(
   '/find-user',
   [validateUsername, validateEmail, validateCallback],
   UserController.getUserInfo,
-);
-
-// 회원 정보 수정 페이지
-// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
-// POST /api/users/:userId
-// req.params {userId}, req.body {password}
-// select id, password from users where id = ? and deleted_at is null
-// res.body {userId}
-userRouter.post(
-  '/:userId',
-  [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
-  isLoggedIn, // 사용자 로그인 여부 검증
-  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
-  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
 );
 
 // 이메일 발송 클릭 -> 아이디 풀 정보 발송

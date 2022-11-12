@@ -1,5 +1,4 @@
 const bcrypt = require('bcrypt');
-const { generateRandomPassword } = require('../lib/util');
 const {
   encryptTemporaryPassword,
 } = require('../lib/middlewares/passwordEncryption');
@@ -7,6 +6,7 @@ const {
   generateRandomToken,
   printCurrentTime,
   printSqlLog,
+  checkPasswordMatch,
 } = require('../lib/util');
 const { sendMailRun } = require('../config/smtpTransporter');
 const logger = require('../config/logger');
@@ -78,63 +78,15 @@ class UserController {
       connection.release();
     }
   };
-  static validateUserWithPasswordCheck = async (req, res, next) => {
-    const reqObj = { ...req.params, ...req.body };
-    const { userId, password } = reqObj;
-
-    const connection = await pool.getConnection();
-
-    try {
-      // userId 로 사용자 정보 조회
-      const queryString =
-        'select id, password from users where id = ? and deleted_at is null';
-      const queryParams = [userId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
-      if (!userInfo) throw new NotFoundError('User info not found');
-
-      const plainPwd = password;
-      const dbInPwd = result[0][0].password;
-      // 비밀번호 일치 여부 파악
-      const isPwdMatch = await bcrypt.compare(plainPwd, dbInPwd);
-
-      if (!isPwdMatch) throw new ClientError('Password is wrong');
-      logger.info('User authentication success');
-      return res.status(successCode.OK).json({ userId: userInfo.id });
-    } catch (err) {
-      next(err);
-    } finally {
-      connection.release();
-    }
-  };
   // 사용자 검증 후 디비에서 조회된 사용자 정보 응답
   // @params req.body { name, email }
   // @returns res.body { id, name, email, phone_number, profile_image_path }
   static getUserInfo = async (req, res, next) => {
-    const reqObj = { ...req.body };
-    const resObj = {};
-    const { name, email } = reqObj;
+    const result = await UserModel.findUserByOptions(req.body);
+    if (result == 500) return next(new InternalServerError(messages[500]));
+    else if (result == 404) return next(new NotFoundError(messages[404]));
 
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'select id, name, email from users where name = ? and email = ? and deleted_at is null';
-      const queryParams = [name, email];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const userInfo = result[0][0];
-      if (!userInfo) {
-        resObj.message = 'USER_NOT_EXIST';
-      } else {
-        resObj.user = userInfo;
-      }
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (err) {
-      throw new InternalServerError(err.message);
-    }
+    return res.status(successCode.OK).json(result);
   };
 
   // 아이디 찾기 컨트롤러
@@ -583,10 +535,6 @@ class UserController {
     }
   };
 
-  isPasswordMatch = async (pwdFromReq, pwdFromDb) => {
-    return await bcrypt.compare(pwdFromReq, pwdFromDb);
-  };
-
   static checkIsPasswordSame = async (req, res) => {
     const result = await UserModel.findPasswordById(
       parseInt(req.params.userId, 10),
@@ -595,7 +543,11 @@ class UserController {
     else if (result == 404) next(new NotFoundError(messages[400]));
 
     try {
-      if (!isPasswordMatch(req.body.password, result[0].password)) {
+      const isPasswordMatch = await checkPasswordMatch(
+        req.body.password,
+        result.password,
+      );
+      if (!isPasswordMatch) {
         resObj.isPwdMatch = false;
         logger.info('PASSWORD_NOT_SAME');
       } else {
@@ -606,6 +558,29 @@ class UserController {
       return res.status(successCode.OK).json(resObj);
     } catch (err) {
       logger.error(err);
+      next(new InternalServerError(messages[500]));
+    }
+  };
+
+  static validateUserWithPasswordCheck = async (req, res, next) => {
+    const result = await UserModel.findPasswordById(
+      parseInt(req.params.userId, 10),
+    );
+    if (result == 500) return next(new InternalServerError(messages[500]));
+    else if (result == 404) return next(new NotFoundError(messages[400]));
+
+    try {
+      const isPasswordMatch = await checkPasswordMatch(
+        req.body.password,
+        result.password,
+      );
+      if (!isPasswordMatch) {
+        return next(new NotFoundError(messages[404]));
+      } else {
+        return res.status(successCode.OK).json({ userId: result.id });
+      }
+    } catch (err) {
+      logger.error(err.stack);
       next(new InternalServerError(messages[500]));
     }
   };
