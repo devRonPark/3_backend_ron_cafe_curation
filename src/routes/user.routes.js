@@ -99,7 +99,7 @@ userRouter.post(
 userRouter.post(
   '/forget-email/send',
   [validateEmail, validateCallback],
-  UserController.sendEmailForEmail,
+  UserController.sendEmailWithAccountInfo,
 );
 // 이메일 발송 클릭 -> 임시 비밀번호 생성 후 이메일 발송
 // POST /api/users/forget-password/send

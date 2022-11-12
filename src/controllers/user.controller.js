@@ -110,9 +110,7 @@ class UserController {
     else if (result == 404) next(new NotFoundError(messages[404]));
     return res.status(successCode.OK).json({ email: result.email });
   };
-  static sendEmailForEmail = async (req, res, next) => {
-    const reqObj = { ...req.body };
-    const { email } = reqObj;
+  static sendEmailWithAccountInfo = async (req, res, next) => {
     try {
       // 송신자에게 보낼 메시지 작성
       const message = {
@@ -121,7 +119,7 @@ class UserController {
         subject: '☕ ZZINCAFE 아이디 찾기 결과',
         html: `
             <p>ZZINCAFE에 가입한 사용자 아이디 정보</p>
-            <h2>${email}</h2>
+            <h2>${req.body.email}</h2>
           `,
       };
       // 이메일 발송
