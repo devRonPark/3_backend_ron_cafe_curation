@@ -153,12 +153,6 @@ class UserController {
   };
   // 비밀번호 찾기 라우터 로직
   static sendEmailWithNewPassword = async (req, res, next) => {
-    const reqObj = { ...req.body };
-    const { id, email } = reqObj;
-
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
-
     try {
       // 8자리의 임시 비밀번호 생성
       const temporaryPassword = generateRandomPassword();
@@ -166,31 +160,21 @@ class UserController {
       const hashedTemporaryPassword =
         encryptTemporaryPassword(temporaryPassword);
 
-      const updateQueryString =
-        'update users set password = ? where id = ? and email = ? and deleted_at is null';
-      const updateQueryParams = [hashedTemporaryPassword, id, email];
-      printSqlLog(updateQueryString, updateQueryParams);
-      const resultOfUpdateQuery = await connection.execute(
-        updateQueryString,
-        updateQueryParams,
-      );
-      const isPwdUpdated = resultOfUpdateQuery[0].affectedRows > 0;
-      if (!isPwdUpdated) {
-        throw new InternalServerError('User password update fail');
-      }
+      const result = await UserModel.updatePassword({
+        password: hashedTemporaryPassword,
+        id: req.body.id,
+        email: req.body.email,
+      });
+      if (result == 500) throw err;
 
       // 임시 비밀번호가 포함된 이메일 발송
       await UserController.sendEmailForTemporaryPassword(
         email,
         temporaryPassword,
       );
-      await connection.commit();
       return res.sendStatus(successCode.OK);
     } catch (err) {
-      await connection.rollback();
-      next(err);
-    } finally {
-      connection.release();
+      next(new InternalServerError(messages[500]));
     }
   };
   // 사용자 프로필 이미지 업데이트
