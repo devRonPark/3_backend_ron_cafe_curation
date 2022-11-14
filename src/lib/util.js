@@ -165,3 +165,9 @@ exports.changeOptionToWhereCond = options => {
 exports.checkPasswordMatch = async (pwdFromReq, pwdFromDb) => {
   return bcrypt.compare(pwdFromReq, pwdFromDb);
 };
+
+exports.encryptPassword = password => {
+  const saltRounds = 10;
+  const salt = bcrypt.genSaltSync(saltRounds);
+  return bcrypt.hashSync(password, salt);
+};

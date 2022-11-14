@@ -71,6 +71,16 @@ class AuthModel {
       connection.release();
     }
   };
+
+  static checkTokenValid = async (token, currentTime) => {
+    const connection = await pool.getConnection();
+
+    const queryString =
+      'select count(0) from auth_email where ae_value = ? and expired_at > ?';
+    const queryParams = [token, currentTime];
+
+    return connection.query(queryString, queryParams);
+  };
 }
 
 module.exports = AuthModel;

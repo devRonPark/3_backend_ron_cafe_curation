@@ -1,6 +1,10 @@
 const logger = require('../config/logger');
 const pool = require('../config/mysql');
-const { changeOptionToWhereCond, printSqlLog } = require('../lib/util');
+const {
+  changeOptionToWhereCond,
+  printSqlLog,
+  printCurrentTime,
+} = require('../lib/util');
 
 class UserModel {
   // option: {id: , name: }
@@ -79,6 +83,34 @@ class UserModel {
       const queryString =
         'update users set password = ? where id = ? and email = ? and deleted_at is null';
       const queryParams = [data.password, data.id, data.email];
+      const [resultOfQuery] = await connection.query(queryString, queryParams);
+      const isPwdUpdated = resultOfQuery[0].affectedRows > 0;
+      if (!isPwdUpdated) result = 500;
+      else result = 200;
+
+      await connection.commit();
+      return result;
+    } catch (err) {
+      await connection.rollback();
+      logger.error(err.stack);
+      result = 500;
+      return result;
+    } finally {
+      connection.release();
+    }
+  };
+
+  // @params data: {password, id}
+  static updateNewPassword = async data => {
+    let result, connection;
+    try {
+      connection = await pool.getConnection();
+      connection.beginTransaction();
+
+      const updatedAt = printCurrentTime();
+      const queryString =
+        'update users set password = ?, updated_at = ? where id = ? and email = ? and deleted_at is null';
+      const queryParams = [data.password, updatedAt, data.id];
       const [resultOfQuery] = await connection.query(queryString, queryParams);
       const isPwdUpdated = resultOfQuery[0].affectedRows > 0;
       if (!isPwdUpdated) result = 500;

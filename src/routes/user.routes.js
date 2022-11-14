@@ -134,7 +134,7 @@ userRouter.patch(
   [validateUserIdParam, validateUserInfo, validateCallback],
   isLoggedIn, // 로그인 여부 파악
   isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
-  UserController.updateNameAndPhoneNumber,
+  UserController.updateNickname,
 );
 
 // 3. 비밀번호 변경
