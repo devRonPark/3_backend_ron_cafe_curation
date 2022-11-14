@@ -1,8 +1,6 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config();
-const { db_info } = require('./config');
-const pool = mysql.createPool(db_info);
-
-console.log('pool info: ', pool);
+const config = require('../config/config');
+console.log('connection pool 생성');
+const pool = mysql.createPool(config.dbInfo);
 
 module.exports = pool;

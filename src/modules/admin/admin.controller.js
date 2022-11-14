@@ -1,9 +1,9 @@
-const { successCode } = require('../lib/statusCodes/statusCode');
-const logger = require('../config/logger');
-const pool = require('../config/mysql');
-const { printSqlLog } = require('../lib/util');
-const MySqlError = require('../lib/errors/mysql.error');
-const NotFoundError = require('../lib/errors/not-found.error');
+const { successCode } = require('../../common/statusCodes/statusCode');
+const logger = require('../../config/logger');
+const pool = require('../../config/mysql');
+const { printSqlLog } = require('../../common/util');
+const MySqlError = require('../../common/errors/mysql.error');
+const NotFoundError = require('../../common/errors/not-found.error');
 
 class AdminController {
   // 페이지 별 카페 데이터 조회

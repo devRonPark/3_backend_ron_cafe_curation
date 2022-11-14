@@ -1,28 +1,29 @@
-const bcrypt = require('bcrypt');
 const {
   encryptTemporaryPassword,
-} = require('../lib/middlewares/passwordEncryption');
+} = require('../../common/middlewares/passwordEncryption');
 const {
   generateRandomToken,
   printCurrentTime,
   printSqlLog,
   checkPasswordMatch,
   encryptPassword,
-} = require('../lib/util');
-const { sendMailRun } = require('../config/smtpTransporter');
-const logger = require('../config/logger');
-const Auth = require('../services/auth');
-const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
-const pool = require('../config/mysql');
-const NotFoundError = require('../lib/errors/not-found.error');
-const InternalServerError = require('../lib/errors/internal-sever.error');
-const ClientError = require('../lib/errors/client.error.js');
-const config = require('../config/config');
-const UserModel = require('../services/user');
-const messages = require('../lib/errors/message');
-const { findUserOption } = require('../lib/constants');
-const { updateNickname } = require('../services/user');
-const AuthModel = require('../services/auth');
+} = require('../../common/util');
+const { sendMailRun } = require('../../config/smtpTransporter');
+const logger = require('../../config/logger');
+const Auth = require('../auth/auth.service');
+const {
+  successCode,
+  errorCode,
+} = require('../../common/statusCodes/statusCode');
+const pool = require('../../config/mysql');
+const NotFoundError = require('../../common/errors/not-found.error');
+const InternalServerError = require('../../common/errors/internal-sever.error');
+const config = require('../../config/config');
+const UserService = require('./user.service');
+const messages = require('../../common/errors/message');
+const { findUserOption } = require('../../common/constants');
+const { updateNickname } = require('./user.service');
+const AuthService = require('../auth/auth.service');
 
 class UserController {
   static getLoggedInUsername = async (req, res, next) => {
@@ -48,7 +49,7 @@ class UserController {
   };
   // 사용자 정보 조회 컨트롤러
   static getUserInfoById = async (req, res, next) => {
-    const result = await UserModel.findUserByType(
+    const result = await UserService.findUserByType(
       findUserOption.id,
       parseInt(req.params.userId, 10),
     );
@@ -85,7 +86,7 @@ class UserController {
   // @params req.body { name, email }
   // @returns res.body { id, name, email, phone_number, profile_image_path }
   static getUserInfo = async (req, res, next) => {
-    const result = await UserModel.findUserByOptions(req.body);
+    const result = await UserService.findUserByOptions(req.body);
     if (result == 500) return next(new InternalServerError(messages[500]));
     else if (result == 404) return next(new NotFoundError(messages[404]));
 
@@ -94,7 +95,7 @@ class UserController {
 
   // 아이디 찾기 컨트롤러
   static getEmailByName = async (req, res, next) => {
-    const result = await UserModel.findUserByType(
+    const result = await UserService.findUserByType(
       findUserOption.name,
       req.body.name,
     );
@@ -105,7 +106,7 @@ class UserController {
   };
   // userId로 아이디 찾기 컨트롤러
   static getEmailByUserId = async (req, res, next) => {
-    const result = await UserModel.findUserByType(
+    const result = await UserService.findUserByType(
       findUserOption.id,
       parseInt(req.params.userId, 10),
     );
@@ -163,7 +164,7 @@ class UserController {
       const hashedTemporaryPassword =
         encryptTemporaryPassword(temporaryPassword);
 
-      const result = await UserModel.updatePassword({
+      const result = await UserService.updatePassword({
         password: hashedTemporaryPassword,
         id: req.body.id,
         email: req.body.email,
@@ -182,7 +183,7 @@ class UserController {
   };
   // 사용자 프로필 이미지 업데이트
   static updateProfileImage = async (req, res, next) => {
-    const result = await UserModel.updateProfile({
+    const result = await UserService.updateProfile({
       profilePath: req.body.image_path,
       updatedAt: printCurrentTime(),
       id: parseInt(req.params.userId, 10),
@@ -251,7 +252,7 @@ class UserController {
   static updateNewPassword = async (req, res, next) => {
     const currentTime = printCurrentTime();
     // 토큰 만료 여부 체크
-    const [resultOfTokenCheck] = await AuthModel.checkTokenValid(
+    const [resultOfTokenCheck] = await AuthService.checkTokenValid(
       req.params.token,
       currentTime,
     );
@@ -262,7 +263,7 @@ class UserController {
     }
     logger.info('token is valid');
 
-    const resultOfFindPassword = await UserModel.findPasswordById(
+    const resultOfFindPassword = await UserService.findPasswordById(
       parseInt(req.params.userId, 10),
     );
     if (resultOfFindPassword == 404) next(new NotFoundError(messages[404]));
@@ -279,7 +280,7 @@ class UserController {
     const encryptedPassword = encryptPassword(req.body.new_password);
     logger.info('New password is encrypted');
 
-    const resultOfUpdatePassword = await UserModel.updateNewPassword({
+    const resultOfUpdatePassword = await UserService.updateNewPassword({
       id: parseInt(req.params.userId, 10),
       password: encryptedPassword,
     });
@@ -318,7 +319,9 @@ class UserController {
   };
   // 사용자 탈퇴 컨트롤러
   static deleteUser = async (req, res, next) => {
-    const result = await UserModel.deleteUser(parseInt(req.params.userId, 10));
+    const result = await UserService.deleteUser(
+      parseInt(req.params.userId, 10),
+    );
     if (result == 500) next(new InternalServerError(messages[500]));
 
     try {
@@ -395,7 +398,7 @@ class UserController {
   };
 
   static checkIsPasswordSame = async (req, res) => {
-    const result = await UserModel.findPasswordById(
+    const result = await UserService.findPasswordById(
       parseInt(req.params.userId, 10),
     );
     if (result == 500) next(new InternalServerError(messages[500]));
@@ -422,7 +425,7 @@ class UserController {
   };
 
   static validateUserWithPasswordCheck = async (req, res, next) => {
-    const result = await UserModel.findPasswordById(
+    const result = await UserService.findPasswordById(
       parseInt(req.params.userId, 10),
     );
     if (result == 500) return next(new InternalServerError(messages[500]));

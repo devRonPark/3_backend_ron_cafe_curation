@@ -1,12 +1,12 @@
-const logger = require('../config/logger');
-const pool = require('../config/mysql');
+const logger = require('../../config/logger');
+const pool = require('../../config/mysql');
 const {
   changeOptionToWhereCond,
   printSqlLog,
   printCurrentTime,
-} = require('../lib/util');
+} = require('../../common/util');
 
-class UserModel {
+class UserService {
   // option: {id: , name: }
   static findUserByType = async (type, value) => {
     let result, connection;
@@ -227,4 +227,4 @@ class UserModel {
   };
 }
 
-module.exports = UserModel;
+module.exports = UserService;

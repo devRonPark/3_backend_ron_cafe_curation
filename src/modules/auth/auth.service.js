@@ -1,9 +1,9 @@
-const logger = require('../config/logger');
-const DB = require('../config/mysql');
-const { convertToDateTimeFormat, printSqlLog } = require('../lib/util');
-const pool = require('../config/mysql');
+const logger = require('../../config/logger');
+const DB = require('../../config/mysql');
+const { convertToDateTimeFormat, printSqlLog } = require('../../common/util');
+const pool = require('../../config/mysql');
 
-class AuthModel {
+class AuthService {
   // 생성된 토큰 저장
   // @param token: {token_value: ..., time_to_live: ..., user_id: ...}
   // @return { state: true }
@@ -83,4 +83,4 @@ class AuthModel {
   };
 }
 
-module.exports = AuthModel;
+module.exports = AuthService;

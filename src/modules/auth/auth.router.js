@@ -6,10 +6,12 @@ const {
   validatePassword,
   validatePasswordConfirmation,
   validateCallback,
-} = require('../lib/middlewares/UserValidate');
-const { passwordEncryption } = require('../lib/middlewares/passwordEncryption');
-const AuthController = require('../controllers/auth.controllers');
-const { uploadImage } = require('../lib/middlewares/ImageUpload');
+} = require('../../common/middlewares/UserValidate');
+const {
+  passwordEncryption,
+} = require('../../common/middlewares/passwordEncryption');
+const AuthController = require('./auth.controller');
+const { uploadImage } = require('../../common/middlewares/ImageUpload');
 
 // 사용자 로그인 여부 검증
 authRouter.get('/session-check', AuthController.checkUserLoggedIn);

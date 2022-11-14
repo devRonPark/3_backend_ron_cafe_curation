@@ -1,16 +1,17 @@
-const logger = require('../config/logger');
+const logger = require('../../config/logger');
 const bcrypt = require('bcrypt');
 const moment = require('moment');
-const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
-const { generateRandomNumber, printSqlLog } = require('../lib/util');
-const { sendMailRun } = require('../config/smtpTransporter');
-const InternalServerError = require('../lib/errors/internal-sever.error');
-const NotFoundError = require('../lib/errors/not-found.error');
-const AlreadyInUseError = require('../lib/errors/already-in-use.error');
-const pool = require('../config/mysql');
-const { convertToDateTimeFormat } = require('../lib/util');
-const AuthModel = require('../models/auth.model');
-const { messages } = require('../lib/errors/message');
+const { successCode } = require('../../common/statusCodes/statusCode');
+const { generateRandomNumber, printSqlLog } = require('../../common/util');
+const { sendMailRun } = require('../../config/smtpTransporter');
+const InternalServerError = require('../../common/errors/internal-sever.error');
+const NotFoundError = require('../../common/errors/not-found.error');
+const AlreadyInUseError = require('../../common/errors/already-in-use.error');
+const pool = require('../../config/mysql');
+const { convertToDateTimeFormat } = require('../../common/util');
+const AuthService = require('./auth.service');
+const { messages } = require('../../common/errors/message');
+const config = require('../../config/config');
 
 class AuthController {
   // 로그인 시 사용자 존재 여부 검사
@@ -88,7 +89,7 @@ class AuthController {
   };
   // 회원가입 컨트롤러
   static createUser = async (req, res, next) => {
-    const result = await AuthModel.saveNewUser(req.body);
+    const result = await AuthService.saveNewUser(req.body);
     if (result === 500) throw new InternalServerError(messages[500]);
     return res.sendStatus(successCode.CREATED);
   };
@@ -194,7 +195,7 @@ class AuthController {
       logger.info('AuthNumber save success');
 
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 회원가입 인증메일',
         text: 'ZZINCAFE 회원가입 인증메일 입니다.', // plain text body

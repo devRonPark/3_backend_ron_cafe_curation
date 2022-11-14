@@ -1,42 +1,42 @@
+// 모듈 import
 const express = require('express');
 require('express-async-errors');
-require('dotenv').config();
 const session = require('express-session');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const config = require('./config/config');
 const sessionStore = require('./config/sessionStore');
-const { errorCode } = require('./lib/statusCodes/statusCode');
-const { deleteImage } = require('./lib/middlewares/ImageDelete');
+const { errorCode } = require('./common/statusCodes/statusCode');
+const { deleteImage } = require('./common/middlewares/ImageDelete');
 const {
   ValidationError,
   AlreadyInUseError,
   NotFoundError,
   MySqlError,
-  ClientError,
   InternalServerError,
   UnauthorizedError,
-} = require('./lib/errors');
+  ClientError,
+} = require('./common/errors');
 
-const adminRouter = require('./routes/admin.routes');
-const userRouter = require('./routes/user.routes');
-const cafeRouter = require('./routes/cafe.routes');
-const authRouter = require('./routes/auth.routes');
+const adminRouter = require('./modules/admin/admin.router');
+const userRouter = require('./modules/user/user.router');
+const cafeRouter = require('./modules/cafe/cafe.router');
+const authRouter = require('./modules/auth/auth.router');
 
 // express 인스턴스 생성
 const app = express();
 
-// 로거 출력용 logger, morgan
-global.logger || (global.logger = require('./config/logger')); // 전역에서 사용
+// middleware setup
+global.logger || (global.logger = require('./config/logger'));
 const morganMiddleware = require('./config/morganMiddleware');
 const logger = require('./config/logger');
-app.use(morganMiddleware); // 콘솔창에 통신결과 나오게 해주는 미들웨어
 
-// 미들웨어 등록 시작, 아래 미들웨어들은 내부적으로 next() 가 실행됨.
 app.use(
+  morganMiddleware,
   // DB에 session 테이블 추가
   session({
-    secret: process.env.SESSION_SECRET_KEY,
+    secret: config.sessionSecret,
     store: sessionStore,
     resave: false,
     saveUninitialized: true, // true일 경우, 모든 요청에 대해 session 이 새로 생성되어 session 스토어에 저장된다.
@@ -51,24 +51,15 @@ app.use(
   // url을 통해 전달되는 데이터에 한글, 공백 등과 같은 문자가 포함될 경우 제대로 인식되지 않는 문제 해결
   express.urlencoded({ extended: true }),
   // 쿠키 파서 미들웨어
-  cookieParser(process.env.SESSION_SECRET_KEY),
+  cookieParser(config.sessionSecret),
   cors({
     origin: true,
     credentials: true,
   }),
+  express.static(path.resolve(__dirname, 'uploads').replace('/src', '')),
 );
 
-console.log(
-  'path.resolve(__dirname): ',
-  path.resolve(__dirname, 'uploads').replace('/src', ''),
-);
-console.log(
-  'path.resolve(__dirname, uploads): ',
-  path.resolve(__dirname, 'uploads'),
-);
-// 이미지 라우팅 설정
-app.use(express.static(path.resolve(__dirname, 'uploads').replace('/src', '')));
-
+// router
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/cafes', cafeRouter);

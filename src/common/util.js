@@ -1,4 +1,4 @@
-const { errorCode, successCode } = require('../lib/statusCodes/statusCode');
+const { errorCode, successCode } = require('./statusCodes/statusCode');
 const ClientError = require('./errors/client.error.js');
 const mysql = require('mysql2/promise');
 // 콘솔 창의 텍스트 색깔 변경

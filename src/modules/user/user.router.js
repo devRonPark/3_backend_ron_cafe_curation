@@ -1,11 +1,10 @@
 const express = require('express');
 
 const userRouter = express.Router();
-const UserController = require('../controllers/user.controller');
-const { isLoggedIn, isLoginUserInfo } = require('../lib/util');
+const UserController = require('./user.controller');
+const { isLoggedIn, isLoginUserInfo } = require('../../common/util');
 const {
   validateUserInfo,
-  validatePhoneNumber,
   validateUserId,
   validateEmail,
   validatePassword,
@@ -13,8 +12,8 @@ const {
   validateUserIdParam,
   validateCallback,
   validateUsername,
-} = require('../lib/middlewares/UserValidate');
-const { uploadImage } = require('../lib/middlewares/ImageUpload');
+} = require('../../common/middlewares/UserValidate');
+const { uploadImage } = require('../../common/middlewares/ImageUpload');
 
 userRouter.get(
   '/logged-in/name',

@@ -1,4 +1,4 @@
-const ValidationError = require('../lib/errors/validation.error');
+const ValidationError = require('../common/errors/validation.error');
 
 const multerConfig = multer => {
   const storage = multer.diskStorage({

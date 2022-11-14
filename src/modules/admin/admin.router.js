@@ -1,6 +1,6 @@
 const express = require('express');
 const adminRouter = express.Router();
-const AdminController = require('../controllers/admin.controllers');
+const AdminController = require('./admin.controller');
 const {
   validateCafeName,
   validateJibunAddr,
@@ -14,8 +14,8 @@ const {
   validatePageQuery,
   validateCallback,
   isCafeInfoExistById,
-} = require('../lib/middlewares/CafeValidate');
-const { uploadImage } = require('../lib/middlewares/ImageUpload');
+} = require('../../common/middlewares/CafeValidate');
+const { uploadImage } = require('../../common/middlewares/ImageUpload');
 
 // 관리자 카페 데이터 조회(1페이지당 10개의 카페 정보)
 // http://localhost:3000/api/admin/cafes?page=${page}
