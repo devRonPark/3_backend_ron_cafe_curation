@@ -1,8 +1,8 @@
 const dotenv = require('dotenv');
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV == 'production') {
   dotenv.config({ path: 'envs/.env.production' });
-} else if (process.env.NODE_ENV === 'development') {
+} else if (process.env.NODE_ENV == 'development') {
   dotenv.config({ path: 'envs/.env.development' });
 } else {
   throw new Error('process.env.NODE_ENV를 설정하지 않았습니다.');
@@ -26,6 +26,5 @@ const config = {
   },
   openApiKey: process.env.OPEN_API_KEY ?? '',
 };
-console.log('config 설정 파일 정보 : ');
-console.log(config);
+
 module.exports = config;

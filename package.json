@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/bin/www.js",
-    "start:dev": "pm2 start src/bin/www.js",
-    "stop": "pm2 kill"
+    "start:dev": "cross-env NODE_ENV=production pm2 start src/bin/www.js",
+    "stop": "pm2 kill",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +39,7 @@
     "winston-daily-rotate-file": "^4.6.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "crypto-js": "^4.1.1",
     "dotenv": "^14.3.2",
     "eslint": "^8.7.0",
@@ -45,6 +47,7 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-prettier": "^4.0.0",
+    "jest": "^29.3.1",
     "prettier": "^2.5.1"
   }
 }
