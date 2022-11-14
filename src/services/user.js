@@ -178,6 +178,53 @@ class UserModel {
       connection.release();
     }
   };
+
+  static deleteUser = async userId => {
+    let result, connection;
+    const queryString = {
+      users:
+        'update users set deleted_at = ? where id = ? and deleted_at is null',
+      likes:
+        'update likes set deleted_at = ? where user_id = ? and deleted_at is null',
+      reviews:
+        'update reviews set deleted_at = ? where user_id = ? and deleted_at is null',
+    };
+    const deletedAt = printCurrentTime();
+    const commonQueryParams = [deletedAt, userId];
+
+    try {
+      connection = await pool.getConnection();
+      connection.beginTransaction();
+
+      const [resultOfDeleteUser] = await connection.query(
+        queryString.users,
+        commonQueryParams,
+      );
+      if (resultOfDeleteUser[0].affectedRows < 0) throw err;
+      const [resultOfDeleteUserLikes] = await connection.query(
+        queryString.likes,
+        commonQueryParams,
+      );
+      if (resultOfDeleteUserLikes[0].affectedRows < 0) throw err;
+      const [resultOfDeleteUserReviews] = await connection.query(
+        queryString.reviews,
+        commonQueryParams,
+      );
+      if (resultOfDeleteUserReviews[0].affectedRows < 0) throw err;
+
+      result = deletedAt;
+
+      await connection.commit();
+      return result;
+    } catch (err) {
+      await connection.rollback();
+      logger.error(err.stack);
+      result = 500;
+      return result;
+    } finally {
+      connection.release();
+    }
+  };
 }
 
 module.exports = UserModel;

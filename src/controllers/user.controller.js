@@ -7,19 +7,22 @@ const {
   printCurrentTime,
   printSqlLog,
   checkPasswordMatch,
+  encryptPassword,
 } = require('../lib/util');
 const { sendMailRun } = require('../config/smtpTransporter');
 const logger = require('../config/logger');
-const Auth = require('../models/auth.model');
+const Auth = require('../services/auth');
 const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
 const pool = require('../config/mysql');
 const NotFoundError = require('../lib/errors/not-found.error');
 const InternalServerError = require('../lib/errors/internal-sever.error');
 const ClientError = require('../lib/errors/client.error.js');
 const config = require('../config/config');
-const UserModel = require('../models/user.model');
+const UserModel = require('../services/user');
 const messages = require('../lib/errors/message');
 const { findUserOption } = require('../lib/constants');
+const { updateNickname } = require('../services/user');
+const AuthModel = require('../services/auth');
 
 class UserController {
   static getLoggedInUsername = async (req, res, next) => {
@@ -179,55 +182,23 @@ class UserController {
   };
   // 사용자 프로필 이미지 업데이트
   static updateProfileImage = async (req, res, next) => {
-    const reqObj = { ...req.params, ...req.body };
-    const { image_path, userId } = reqObj;
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString = `update users set profile_image_path = ?, updated_at = ? where id = ?
-      `;
-      const updated_at = printCurrentTime();
-      const queryParams = [image_path, updated_at, userId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.execute(queryString, queryParams);
-      const isUserProfileUpdated = result[0].affectedRows > 0;
-      if (!isUserProfileUpdated) {
-        throw new InternalServerError('PROFILE_INFO_UPDATE_FAILURE');
-      }
-      logger.info('Profile image path is updated successfully');
-      return res.status(successCode.OK).json({ updatedImagePath: image_path });
-    } catch (err) {
-      next(err);
-    } finally {
-      connection.release();
-    }
+    const result = await UserModel.updateProfile({
+      profilePath: req.body.image_path,
+      updatedAt: printCurrentTime(),
+      id: parseInt(req.params.userId, 10),
+    });
+    if (result == 500) return next(new InternalServerError(messages[500]));
+    return res.status(successCode.OK).json({ updatedImagePath: image_path });
   };
   // 사용자 닉네임 수정
-  static updateNameAndPhoneNumber = async (req, res, next) => {
-    const reqObj = { ...req.params, ...req.body };
-    let { userId, name } = reqObj;
-    userId = parseInt(userId, 10);
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'update users set name = ?, updated_at = ? where id = ?';
-      const updated_at = printCurrentTime();
-      const queryParams = [name, updated_at, userId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.execute(queryString, queryParams);
-      const isUserInfoUpdated = result[0].affectedRows > 0;
-      if (!isUserInfoUpdated) {
-        throw new InternalServerError('User info is not updated');
-      }
-
-      logger.info('User info is updated');
-      return res.status(successCode.OK).json({ updatedNickname: name });
-    } catch (err) {
-      next(err);
-    } finally {
-      connection.release();
-    }
+  static updateNickname = async (req, res, next) => {
+    const result = await updateNickname({
+      id: parseInt(req.params.userId, 10),
+      name: req.body.name,
+      updatedAt: printCurrentTime(),
+    });
+    if (result == 500) return next(new InternalServerError(messages[500]));
+    return res.status(successCode.OK).json({ updatedNickname: name });
   };
   static sendEmailForNewPassword = async (req, res, next) => {
     // 회원 이메일로 링크 전송
@@ -278,102 +249,54 @@ class UserController {
   };
   // 비밀번호 업데이트
   static updateNewPassword = async (req, res, next) => {
-    const reqObj = { ...req.params, ...req.body };
-    const resObj = {};
-
-    let { userId, token, current_password, new_password } = reqObj;
-    userId = parseInt(userId, 10);
-
     const currentTime = printCurrentTime();
-    const queryString = {
-      // 토큰 유효 기한이 아직 유효한지까지도 검증
-      checkTokenValid:
-        'select count(0) from auth_email where ae_value = ? and expired_at > ?',
-      getPwdInDb:
-        'select password from users where id = ? and deleted_at is null',
-      updateNewPwd:
-        'update users set password = ?, updated_at = ? where id = ? and deleted_at is null',
-    };
-    const queryParams = {
-      checkTokenValid: [token, currentTime],
-      getPwdInDb: [userId],
-      updateNewPwd: [],
-    };
-    const result = {};
-
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
-
-    try {
-      // token_value로 token 일치 여부 파악
-      printSqlLog(queryString.checkTokenValid, queryParams.checkTokenValid);
-      result.checkTokenValid = await connection.query(
-        queryString.checkTokenValid,
-        queryParams.checkTokenValid,
-      );
-      const isTokenValid = result.checkTokenValid[0][0]['count(0)'] > 0;
-      // 토큰이 만료된 경우
-      if (!isTokenValid) {
-        resObj.message = 'TOKEN_IS_EXPIRED';
-        return res.status(errorCode.UNAUTHORIZED).json(resObj);
-      }
-
-      logger.info('token is valid');
-
-      // token이 일치하면, userId로 db에 저장된 password 불러오기
-      printSqlLog(queryString.getPwdInDb, queryParams.getPwdInDb);
-      result.getPwdInDb = await connection.query(
-        queryString.getPwdInDb,
-        queryParams.getPwdInDb,
-      );
-      const pwdInDb = result.getPwdInDb[0][0].password;
-
-      // passwordInDb와 currentPassword 일치 여부 파악
-      const isPwdMatch = await bcrypt.compare(current_password, pwdInDb);
-      if (!isPwdMatch) {
-        resObj.message = 'PASSWORD_IS_WRONG';
-        return res.status(successCode.OK).json(resObj);
-      }
-
-      // 비밀번호가 일치하면, 입력된 newPassword 암호화
-      const saltRounds = 10;
-      const salt = bcrypt.genSaltSync(saltRounds);
-      const encryptedPassword = bcrypt.hashSync(new_password, salt);
-      logger.info('New password is encrypted');
-
-      // 암호화된 newPassword를 db에 업데이트
-      const updated_at = printCurrentTime();
-      queryParams.updateNewPwd = [encryptedPassword, updated_at, userId];
-      printSqlLog(queryString.updateNewPwd, queryParams.updateNewPwd);
-      result.updateNewPwd = await connection.execute(
-        queryString.updateNewPwd,
-        queryParams.updateNewPwd,
-      );
-      const isNewPwdUpdated = result.updateNewPwd[0].affectedRows > 0;
-      if (!isNewPwdUpdated)
-        throw new InternalServerError('New password updated fail');
-      logger.info('New password is updated');
-
-      // 사용자가 현재 로그인한 상태라면 새로 업데이트된 비밀번호로 로그인하도록 로그아웃 처리
-      if (req.session.userid) {
-        req.session.destroy(err => {
-          console.log(
-            'session object is deleted successfully in session store',
-          );
-          res.clearCookie('sessionID');
-          res.clearCookie('userid');
-        });
-      }
-
-      await connection.commit();
-      connection.release();
-      return res.sendStatus(successCode.OK);
-    } catch (err) {
-      await connection.rollback();
-      next(err);
-    } finally {
-      connection.release();
+    // 토큰 만료 여부 체크
+    const [resultOfTokenCheck] = await AuthModel.checkTokenValid(
+      req.params.token,
+      currentTime,
+    );
+    const isTokenValid = resultOfTokenCheck[0]['count(0)'] > 0;
+    if (!isTokenValid) {
+      resObj.message = 'TOKEN_IS_EXPIRED';
+      return res.status(errorCode.UNAUTHORIZED).json(resObj);
     }
+    logger.info('token is valid');
+
+    const resultOfFindPassword = await UserModel.findPasswordById(
+      parseInt(req.params.userId, 10),
+    );
+    if (resultOfFindPassword == 404) next(new NotFoundError(messages[404]));
+    const pwdInDb = resultOfFindPassword.password;
+
+    // passwordInDb와 currentPassword 일치 여부 파악
+    const isPwdMatch = await checkPasswordMatch(current_password, pwdInDb);
+    if (!isPwdMatch) {
+      resObj.message = 'PASSWORD_IS_WRONG';
+      return res.status(successCode.OK).json(resObj);
+    }
+
+    // 비밀번호가 일치하면, 입력된 newPassword 암호화
+    const encryptedPassword = encryptPassword(req.body.new_password);
+    logger.info('New password is encrypted');
+
+    const resultOfUpdatePassword = await UserModel.updateNewPassword({
+      id: parseInt(req.params.userId, 10),
+      password: encryptedPassword,
+    });
+    if (resultOfUpdatePassword == 500)
+      next(new InternalServerError(messages[500]));
+
+    logger.info('New password is updated');
+
+    // 사용자가 현재 로그인한 상태라면 새로 업데이트된 비밀번호로 로그인하도록 로그아웃 처리
+    if (req.session.userid) {
+      req.session.destroy(err => {
+        res.clearCookie('sessionID');
+        res.clearCookie('userid');
+      });
+    }
+
+    return res.sendStatus(successCode.OK);
   };
 
   static getTokenAfterDbSave = async req => {
@@ -395,64 +318,18 @@ class UserController {
   };
   // 사용자 탈퇴 컨트롤러
   static deleteUser = async (req, res, next) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
+    const result = await UserModel.deleteUser(parseInt(req.params.userId, 10));
+    if (result == 500) next(new InternalServerError(messages[500]));
 
-    let { userId } = reqObj;
-    userId = parseInt(userId, 10);
-
-    const queryString = {
-      users:
-        'update users set deleted_at = ? where id = ? and deleted_at is null',
-      likes:
-        'update likes set deleted_at = ? where user_id = ? and deleted_at is null',
-      reviews:
-        'update reviews set deleted_at = ? where user_id = ? and deleted_at is null',
-    };
-
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
     try {
-      const deleted_at = printCurrentTime();
-      const queryParams = [deleted_at, userId];
-      const resultOfUsers = await connection.execute(
-        queryString.users,
-        queryParams,
-      );
-      const isUserDeleted = resultOfUsers[0].affectedRows > 0;
-      if (isUserDeleted) {
-        logger.info('USER_DELETE_SUCCESS');
-        resObj['deleted_at'] = deleted_at;
-      }
-
-      const resultOfLikes = await connection.execute(
-        queryString.likes,
-        queryParams,
-      );
-      const isLikesDeleted = resultOfLikes[0].affectedRows > 0;
-
-      if (isLikesDeleted) logger.info('LIKE_DATA_EXIST_AND_DELETED');
-      const resultOfReviews = await connection.execute(
-        queryString.reviews,
-        queryParams,
-      );
-      const isReviewsDeleted = resultOfReviews[0].affectedRows > 0;
-      if (isReviewsDeleted) logger.info('LIKE_DATA_EXIST_AND_DELETED');
-
-      await connection.commit();
       // 사용자 탈퇴에 따른 현재 활성화된 로그인 세션 삭제
       req.session.destroy(err => {
-        console.log('session object is deleted successfully in session store');
         res.clearCookie('sessionID');
         res.clearCookie('userid');
       });
-      // 사용자 회원 탈퇴 시에 사용자가 남긴 좋아요 및 리뷰 정보들 또한 전부 deleted_at 처리해야 하는 건가?
-      return res.status(successCode.OK).json(resObj);
+      return res.status(successCode.OK).json({ deleted_at: result });
     } catch (err) {
-      await connection.rollback();
-      throw new InternalServerError(err.message);
-    } finally {
-      connection.release();
+      next(new InternalServerError(messages[500]));
     }
   };
   // 사용자가 작성한 모든 리뷰 정보 조회
