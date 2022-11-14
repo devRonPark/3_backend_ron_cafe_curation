@@ -10,6 +10,7 @@ class UserModel {
       connection = await pool.getConnection();
       const queryString = `select id, name, email, profile_image_path from users where ${type} = ? and deleted_at is null`;
       const queryParams = [value];
+      printSqlLog(queryString, queryParams);
       const [resultOfQuery] = await connection.query(queryString, queryParams);
       if (!resultOfQuery[0]) result = 404;
       else result = resultOfQuery[0];
@@ -30,6 +31,7 @@ class UserModel {
       const queryString = `select id, name, email, profile_image_path from users where ${changeOptionToWhereCond(
         options,
       )} and deleted_at is null`;
+      printSqlLog(queryString);
       const [resultOfQuery] = await connection.query(queryString);
       if (!resultOfQuery[0]) result = 404;
       else result = resultOfQuery[0];
@@ -52,11 +54,12 @@ class UserModel {
       const queryString =
         'select id, password from users where id = ? and deleted_at is null';
       const queryParams = [userId];
+      printSqlLog(queryString, queryParams);
       const [resultOfQuery] = await connection.query(queryString, queryParams);
-      logger.info(resultOfQuery);
+
       if (!resultOfQuery[0]) result = 404;
       else result = resultOfQuery[0];
-      logger.info(result);
+
       return result;
     } catch (err) {
       logger.error(err.stack);
@@ -67,6 +70,7 @@ class UserModel {
     }
   };
 
+  // @params data: {password, id, email}
   static updatePassword = async data => {
     let result, connection;
     try {
@@ -78,6 +82,57 @@ class UserModel {
       const [resultOfQuery] = await connection.query(queryString, queryParams);
       const isPwdUpdated = resultOfQuery[0].affectedRows > 0;
       if (!isPwdUpdated) result = 500;
+      else result = 200;
+
+      await connection.commit();
+      return result;
+    } catch (err) {
+      await connection.rollback();
+      logger.error(err.stack);
+      result = 500;
+      return result;
+    } finally {
+      connection.release();
+    }
+  };
+
+  // @params data: {imagePath, updatedAt, id}
+  static updateProfile = async data => {
+    let result, connection;
+    try {
+      connection = await pool.getConnection();
+      connection.beginTransaction();
+      const queryString =
+        'update users set profile_image_path = ?, updated_at = ? where id = ?';
+      const queryParams = [data.profilePath, data.updatedAt, data.id];
+      const [resultOfQuery] = await connection.query(queryString, queryParams);
+      const isProfileUpdated = resultOfQuery[0].affectedRows > 0;
+      if (!isProfileUpdated) result = 500;
+      else result = 200;
+
+      await connection.commit();
+      return result;
+    } catch (err) {
+      await connection.rollback();
+      logger.error(err.stack);
+      result = 500;
+      return result;
+    } finally {
+      connection.release();
+    }
+  };
+  // @params data: {name, updatedAt, id}
+  static updateNickname = async data => {
+    let result, connection;
+    try {
+      connection = await pool.getConnection();
+      connection.beginTransaction();
+      const queryString =
+        'update users set name = ?, updated_at = ? where id = ?';
+      const queryParams = [data.name, data.updatedAt, data.id];
+      const [resultOfQuery] = await connection.query(queryString, queryParams);
+      const isNicknameUpdated = resultOfQuery[0].affectedRows > 0;
+      if (!isNicknameUpdated) result = 500;
       else result = 200;
 
       await connection.commit();
