@@ -1,6 +1,5 @@
-const { errorCode, successCode } = require('../lib/statusCodes/statusCode');
-const ClientError = require('../lib/errors/client.error.js');
-const UnauthorizedError = require('../lib/errors/unauthorized.error');
+const { errorCode, successCode } = require('./statusCodes/statusCode');
+const ClientError = require('./errors/client.error.js');
 const mysql = require('mysql2/promise');
 // 콘솔 창의 텍스트 색깔 변경
 const colors = require('colors');
@@ -10,6 +9,8 @@ const moment = require('moment');
 const crypto = require('crypto');
 // 카페의 위치 데이터 값 중부원점 >> WGS84 좌표계로 변환
 const proj4 = require('proj4');
+const bcrypt = require('bcrypt');
+const logger = require('../config/logger');
 require('moment-timezone');
 // 시간대는 한국 서울 기준
 moment.tz.setDefault('Asia/Seoul');
@@ -43,11 +44,11 @@ setTimeout(() => {
 }, 5000);
 // min ~ max 까지 랜덤으로 숫자 생성
 // TODO 현재 시간까지 추가 권장
-exports.generateRandomNumber = function (min, max) {
+exports.generateRandomNumber = (min, max) => {
   const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
   return randomNumber;
 };
-exports.generateRandomToken = function () {
+exports.generateRandomToken = () => {
   return crypto.randomBytes(20).toString('hex');
 };
 exports.convertLocationData = coordinateObj => {
@@ -65,7 +66,7 @@ exports.convertLocationData = coordinateObj => {
 };
 
 // 로그인 여부 판단
-exports.isLoggedIn = function (req, res, next) {
+exports.isLoggedIn = (req, res, next) => {
   // 로그인하지 않은 경우
   if (!req.session.userid) {
     return res.status(successCode.OK).json({ message: 'LOGIN_REQUIRED' });
@@ -74,7 +75,7 @@ exports.isLoggedIn = function (req, res, next) {
   next();
 };
 // 로그인한 사용자 id와 req.params.id 일치 여부 파악
-exports.isLoginUserInfo = function (req, res, next) {
+exports.isLoginUserInfo = (req, res, next) => {
   let { userId } = req.params;
   // req.params.userId 는 string이므로 숫자로 변환 필요
   userId = parseInt(userId, 10);
@@ -86,7 +87,7 @@ exports.isLoginUserInfo = function (req, res, next) {
   next();
 };
 // 로그인하지 않았는지
-exports.isNotLoggedIn = function (req, res, next) {
+exports.isNotLoggedIn = (req, res, next) => {
   // 로그인하지 않은 경우
   if (req.session.userid) {
     return res.status(errCode.FORBIDDEN).json({ message: 'ALREADY_LOGGED_IN' });
@@ -95,7 +96,7 @@ exports.isNotLoggedIn = function (req, res, next) {
   next();
 };
 // 접근 가능 여부 판단
-exports.hasNoPermission = function (req, res, next) {
+exports.hasNoPermission = (req, res, next) => {
   // 사용자가 로그인 시
   if (req.session.userid && req.session.role === 'user') {
     return res.status(errCode.FORBIDDEN).json({ message: 'NO_PERMISSION' });
@@ -104,7 +105,7 @@ exports.hasNoPermission = function (req, res, next) {
   next();
 };
 // 로그인 안 한 상태인지 체크
-exports.isNotAuthorized = function (req, res, next) {
+exports.isNotAuthorized = (req, res, next) => {
   // session 객체가 존재하지 않으면,
   if (!req.session) return res.send(err);
 
@@ -116,8 +117,8 @@ exports.isNotAuthorized = function (req, res, next) {
   next();
 };
 // req 객체에 logout 메소드 추가
-exports.addLogout = function () {
-  return function (req, res, next) {
+exports.addLogout = () => {
+  return (req, res, next) => {
     req.logout = function () {
       req.session.destroy(); // 세션 삭제
     };
@@ -143,4 +144,30 @@ exports.generateRandomPassword = () => {
   }
 
   return randomString;
+};
+
+exports.changeOptionToWhereCond = options => {
+  const optionArray = Object.entries(options);
+  return optionArray
+    .map((option, idx) => {
+      if (typeof option[1] == 'number') {
+        if (idx == optionArray.length - 1) return `${option[0]} = ${option[1]}`;
+        return `${option[0]} = ${option[1]} and `;
+      } else if (typeof option[1] == 'string') {
+        if (idx == optionArray.length - 1)
+          return `${option[0]} = \"${option[1]}\"`;
+        return `${option[0]} = \"${option[1]}\" and `;
+      }
+    })
+    .join('');
+};
+
+exports.checkPasswordMatch = async (pwdFromReq, pwdFromDb) => {
+  return bcrypt.compare(pwdFromReq, pwdFromDb);
+};
+
+exports.encryptPassword = password => {
+  const saltRounds = 10;
+  const salt = bcrypt.genSaltSync(saltRounds);
+  return bcrypt.hashSync(password, salt);
 };

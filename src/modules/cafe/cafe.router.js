@@ -1,7 +1,7 @@
 const express = require('express');
-const CafeController = require('../controllers/cafe.controllers');
+const CafeController = require('./cafe.controller');
 
-const { isLoggedIn } = require('../lib/util');
+const { isLoggedIn } = require('../../common/util');
 const {
   isCafeInfoExistById,
   isCafeLikeActivated,
@@ -9,9 +9,13 @@ const {
   validateCallback,
   validateQueryForSearch,
   validatePageQuery,
-} = require('../lib/middlewares/CafeValidate');
-const { isReviewExistById } = require('../lib/middlewares/ReviewValidate');
-const { validateUserIdParam } = require('../lib/middlewares/UserValidate');
+} = require('../../common/middlewares/CafeValidate');
+const {
+  isReviewExistById,
+} = require('../../common/middlewares/ReviewValidate');
+const {
+  validateUserIdParam,
+} = require('../../common/middlewares/UserValidate');
 const cafeRouter = express.Router();
 
 // 카페 데이터 조회(1페이지당 10개의 카페 정보)

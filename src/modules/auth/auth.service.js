@@ -1,9 +1,9 @@
-const logger = require('../config/logger');
-const DB = require('../config/mysql');
-const { convertToDateTimeFormat, printSqlLog } = require('../lib/util');
-const pool = require('../config/mysql');
+const logger = require('../../config/logger');
+const DB = require('../../config/mysql');
+const { convertToDateTimeFormat, printSqlLog } = require('../../common/util');
+const pool = require('../../config/mysql');
 
-class Auth {
+class AuthService {
   // 생성된 토큰 저장
   // @param token: {token_value: ..., time_to_live: ..., user_id: ...}
   // @return { state: true }
@@ -43,6 +43,44 @@ class Auth {
       throw new Error(err.message);
     }
   };
+
+  // @param userInfo: {name, image_path, email, password}
+  static saveNewUser = async userInfo => {
+    let result = 0;
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const { name, image_path, email, password } = userInfo;
+      const queryString =
+        'insert into users (name, profile_image_path, email, password) values (?,?,?,?)';
+      const queryParams = [name, image_path, email, password];
+      const resultOfQuery = await connection.execute(queryString, queryParams);
+      console.log(resultOfQuery[0]);
+      if (resultOfQuery[0].affectedRows === 0) result = 500;
+      else result = 201;
+
+      await connection.commit();
+
+      return result;
+    } catch (err) {
+      await connection.rollback();
+      result = 500;
+      return result;
+    } finally {
+      connection.release();
+    }
+  };
+
+  static checkTokenValid = async (token, currentTime) => {
+    const connection = await pool.getConnection();
+
+    const queryString =
+      'select count(0) from auth_email where ae_value = ? and expired_at > ?';
+    const queryParams = [token, currentTime];
+
+    return connection.query(queryString, queryParams);
+  };
 }
 
-module.exports = Auth;
+module.exports = AuthService;

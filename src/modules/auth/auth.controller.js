@@ -1,15 +1,17 @@
-const logger = require('../config/logger');
+const logger = require('../../config/logger');
 const bcrypt = require('bcrypt');
 const moment = require('moment');
-const { successCode } = require('../lib/statusCodes/statusCode');
-const { generateRandomNumber, printSqlLog } = require('../lib/util');
-const { sendMailRun } = require('../config/smtpTransporter');
-const InternalServerError = require('../lib/errors/internal-sever.error');
-const NotFoundError = require('../lib/errors/not-found.error');
-const ClientError = require('../lib/errors/client.error.js');
-const AlreadyInUseError = require('../lib/errors/already-in-use.error');
-const pool = require('../config/mysql');
-const { convertToDateTimeFormat } = require('../lib/util');
+const { successCode } = require('../../common/statusCodes/statusCode');
+const { generateRandomNumber, printSqlLog } = require('../../common/util');
+const { sendMailRun } = require('../../config/smtpTransporter');
+const InternalServerError = require('../../common/errors/internal-sever.error');
+const NotFoundError = require('../../common/errors/not-found.error');
+const AlreadyInUseError = require('../../common/errors/already-in-use.error');
+const pool = require('../../config/mysql');
+const { convertToDateTimeFormat } = require('../../common/util');
+const AuthService = require('./auth.service');
+const { messages } = require('../../common/errors/message');
+const config = require('../../config/config');
 
 class AuthController {
   // 로그인 시 사용자 존재 여부 검사
@@ -86,32 +88,14 @@ class AuthController {
     }
   };
   // 회원가입 컨트롤러
-  static createUser = async function (req, res, next) {
-    const reqObj = { ...req.body };
-    const { name, image_path, email, password } = reqObj;
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString =
-        'insert into users (name, profile_image_path, email, password) values (?,?,?,?)';
-      const queryParams = [name, image_path, email, password];
-      const result = await connection.execute(queryString, queryParams);
-      if (result[0].affectedRows === 0) {
-        throw new InternalServerError('User register fail');
-      }
-      logger.info('User register success');
-      // TODO 회원가입 성공 시, 중복 요청에 대한 처리 필요
-      return res.sendStatus(successCode.CREATED);
-    } catch (err) {
-      // TODO 회원가입 실패 시, 중복 요청에 대한 처리 필요
-      throw err;
-    } finally {
-      connection.release();
-    }
+  static createUser = async (req, res, next) => {
+    const result = await AuthService.saveNewUser(req.body);
+    if (result === 500) throw new InternalServerError(messages[500]);
+    return res.sendStatus(successCode.CREATED);
   };
+
   // 로그인 시 사용자 인증
-  static authenticate = async function (req, res, next) {
+  static authenticate = async (req, res, next) => {
     const reqObj = { ...req.body };
     const resObj = {};
     const { email, password, isAutoLoginChecked } = reqObj;
@@ -178,7 +162,7 @@ class AuthController {
     }
   };
   // 사용자 로그아웃
-  static logout = function (req, res, next) {
+  static logout = (req, res, next) => {
     req.session.destroy(err => {
       console.log('session object is deleted successfully in session store');
       res.clearCookie('sessionID');
@@ -186,7 +170,7 @@ class AuthController {
     });
   };
   // 이메일 인증을 위한 6자리 인증번호를 포함한 메일 발송
-  static authEmail = async function (req, res) {
+  static authEmail = async (req, res) => {
     try {
       // 회원가입 시 사용자가 입력한 이메일 주소
       const { email } = req.body;
@@ -211,7 +195,7 @@ class AuthController {
       logger.info('AuthNumber save success');
 
       const message = {
-        from: process.env.ACCOUNT_USER, // 송신자 이메일 주소
+        from: config.mailInfo.user, // 송신자 이메일 주소
         to: email, // 수신자 이메일 주소
         subject: '☕ ZZINCAFE 회원가입 인증메일',
         text: 'ZZINCAFE 회원가입 인증메일 입니다.', // plain text body

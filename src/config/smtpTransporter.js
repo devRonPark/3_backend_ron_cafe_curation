@@ -1,5 +1,6 @@
+const config = require('../config/config');
 const nodemailer = require('nodemailer');
-const InternalServerError = require('../lib/errors/internal-sever.error');
+const InternalServerError = require('../common/errors/internal-sever.error');
 
 // SMTP 옵션
 const smtpOption = {
@@ -8,10 +9,10 @@ const smtpOption = {
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.ACCOUNT_USER,
-    pass: process.env.ACCOUNT_PASS,
+    user: config.mailInfo.user,
+    pass: config.mailInfo.password,
   },
-  from: process.env.ACCOUNT_USER,
+  from: config.mailInfo.user,
   // 환경변수로 메일 주소와 비밀번호 설정
 };
 // SMTP 객체 생성

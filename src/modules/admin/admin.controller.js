@@ -1,13 +1,13 @@
-const { successCode } = require('../lib/statusCodes/statusCode');
-const logger = require('../config/logger');
-const pool = require('../config/mysql');
-const { printSqlLog } = require('../lib/util');
-const MySqlError = require('../lib/errors/mysql.error');
-const NotFoundError = require('../lib/errors/not-found.error');
+const { successCode } = require('../../common/statusCodes/statusCode');
+const logger = require('../../config/logger');
+const pool = require('../../config/mysql');
+const { printSqlLog } = require('../../common/util');
+const MySqlError = require('../../common/errors/mysql.error');
+const NotFoundError = require('../../common/errors/not-found.error');
 
 class AdminController {
   // 페이지 별 카페 데이터 조회
-  static getCafeDataByPage = async function (req, res, next) {
+  static getCafeDataByPage = async (req, res, next) => {
     const currentPage = req.query.page.trim(); // 현재 페이지
     const countPage = 10; // 한 페이지에 보여줄 카페 정보 수
     const queryString = {
@@ -61,7 +61,7 @@ class AdminController {
     }
   };
   // 관리자의 카페 정보 등록 컨트롤러
-  static registerCafeInfo = async function (req, res, next) {
+  static registerCafeInfo = async (req, res, next) => {
     const reqObj = { ...req.body, image_path: req.file.path };
     // 응답으로 전달할 객체
     const resObj = {};
@@ -191,7 +191,7 @@ class AdminController {
       connection.release();
     }
   };
-  static updateCafeImage = async function (req, res) {
+  static updateCafeImage = async (req, res) => {
     const imagePath = req.file.path;
     const cafeId = req.params.cafeId;
 
@@ -220,7 +220,7 @@ class AdminController {
     }
   };
   // 카페 정보(카페 이름, 전화번호, 지번 주소, 도로명 주소, 위도, 경도) 업데이트
-  static updateCafeInfo = async function (req, res) {
+  static updateCafeInfo = async (req, res) => {
     const reqObj = { ...req.body, cafeId: req.params.cafeId };
     const connection = await pool.getConnection();
     const {
@@ -261,7 +261,7 @@ class AdminController {
     }
   };
   // 카페 메뉴 정보 수정 요청
-  static updateMenus = async function (req, res, next) {
+  static updateMenus = async (req, res, next) => {
     const reqObj = { ...req.body, cafeId: req.params.cafeId };
     const { menus, cafeId } = reqObj;
 
@@ -296,7 +296,7 @@ class AdminController {
     }
   };
   // 카페 운영 시간 정보 수정 요청
-  static updateCafeOperHours = async function (req, res) {
+  static updateCafeOperHours = async (req, res) => {
     const reqObj = { ...req.body, cafeId: req.params.cafeId };
     const { operating_hours, cafeId } = reqObj;
 
@@ -345,7 +345,7 @@ class AdminController {
   // 관리자 카페 정보 삭제 컨트롤러
   // cafe_id와 일치하는 모든 데이터(카페 정보, 메뉴, 영업시간) 삭제
   // cafe_id와 일치하는 모든 데이터 row에 deleted_at 데이터 추가
-  static deleteCafeInfo = async function (req, res) {
+  static deleteCafeInfo = async (req, res) => {
     const cafeId = req.params.cafeId;
     const queryString = {
       cafeInfo: 'update cafes set deleted_at=? where id=?',

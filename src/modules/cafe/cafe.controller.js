@@ -4,19 +4,23 @@ const {
   convertLocationData,
   printSqlLog,
   printCurrentTime,
-} = require('../lib/util');
-const Cafe = require('../models/cafe');
-const { successCode, errorCode } = require('../lib/statusCodes/statusCode');
-const logger = require('../config/logger');
-const pool = require('../config/mysql');
-const NotFoundError = require('../lib/errors/not-found.error');
-const MySqlError = require('../lib/errors/mysql.error');
-const ClientError = require('../lib/errors/client.error.js');
-const InternalServerError = require('../lib/errors/internal-sever.error');
+} = require('../../common/util');
+const CafeService = require('./cafe.service');
+const {
+  successCode,
+  errorCode,
+} = require('../../common/statusCodes/statusCode');
+const logger = require('../../config/logger');
+const pool = require('../../config/mysql');
+const NotFoundError = require('../../common/errors/not-found.error');
+const MySqlError = require('../../common/errors/mysql.error');
+const ClientError = require('../../common/errors/client.error.js');
+const InternalServerError = require('../../common/errors/internal-sever.error');
+const config = require('../../config/config');
 
 class CafeController {
   // 페이지 별 카페 데이터 조회
-  static getCafeDataByPage = async function (req, res, next) {
+  static getCafeDataByPage = async (req, res, next) => {
     const currentPage = req.query.page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
     const queryString = {
@@ -73,7 +77,7 @@ class CafeController {
   // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
   static getDataFromPublicAPI = async (req, res, next) => {
     try {
-      const apiKey = process.env.OPEN_API_KEY;
+      const apiKey = config.openApiKey;
       const absoluteBasePath =
         'C:\\Users\\User\\Documents\\3기_풀스택 교육_AdapterZ_\\3_backend_ron_cafe_curation\\public\\cafe_info_in_seoul';
       const cafeData = [];
@@ -172,7 +176,7 @@ class CafeController {
   static saveDataToDb = async (req, res, next) => {
     try {
       const { cafeData } = req;
-      const response = await Cafe.saveDataFromPublicApi(cafeData);
+      const response = await CafeService.saveDataFromPublicApi(cafeData);
       logger.info('response: ', response);
       return res.sendStatus(successCode.CREATED);
     } catch (err) {

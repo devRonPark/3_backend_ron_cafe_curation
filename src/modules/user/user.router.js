@@ -1,11 +1,10 @@
 const express = require('express');
 
 const userRouter = express.Router();
-const UserController = require('../controllers/user.controller');
-const { isLoggedIn, isLoginUserInfo } = require('../lib/util');
+const UserController = require('./user.controller');
+const { isLoggedIn, isLoginUserInfo } = require('../../common/util');
 const {
   validateUserInfo,
-  validatePhoneNumber,
   validateUserId,
   validateEmail,
   validatePassword,
@@ -13,8 +12,8 @@ const {
   validateUserIdParam,
   validateCallback,
   validateUsername,
-} = require('../lib/middlewares/UserValidate');
-const { uploadImage } = require('../lib/middlewares/ImageUpload');
+} = require('../../common/middlewares/UserValidate');
+const { uploadImage } = require('../../common/middlewares/ImageUpload');
 
 userRouter.get(
   '/logged-in/name',
@@ -44,6 +43,20 @@ userRouter.get(
   UserController.getEmailByUserId,
 );
 
+// 회원 정보 수정 페이지
+// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
+// POST /api/users/:userId
+// req.params {userId}, req.body {password}
+// select id, password from users where id = ? and deleted_at is null
+// res.body {userId}
+userRouter.post(
+  '/:userId',
+  [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
+  isLoggedIn, // 사용자 로그인 여부 검증
+  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
+  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
+);
+
 // POST /api/users/:userId/password
 // req.params {userId}
 // req.body {password}
@@ -52,7 +65,7 @@ userRouter.get(
 userRouter.post(
   '/:userId/password',
   [validateUserIdParam, validateCallback],
-  UserController.checkIsPwdSame,
+  UserController.checkIsPasswordSame,
 );
 
 // 사용자 아이디 찾기
@@ -78,20 +91,6 @@ userRouter.post(
   UserController.getUserInfo,
 );
 
-// 회원 정보 수정 페이지
-// userId와 입력받은 비밀번호를 통해 현재 로그인한 사용자 검증
-// POST /api/users/:userId
-// req.params {userId}, req.body {password}
-// select id, password from users where id = ? and deleted_at is null
-// res.body {userId}
-userRouter.post(
-  '/:userId',
-  [validateUserIdParam, validatePassword('password'), validateCallback], // 데이터 유효성 검증
-  isLoggedIn, // 사용자 로그인 여부 검증
-  isLoginUserInfo, // 조회하려는 사용자 id와 현재 로그인한 사용자 id 일치 여부 검증
-  UserController.validateUserWithPasswordCheck, // 비밀번호 일치 여부 확인
-);
-
 // 이메일 발송 클릭 -> 아이디 풀 정보 발송
 // POST /api/users/forget-email/send
 // req.body : { email }
@@ -99,7 +98,7 @@ userRouter.post(
 userRouter.post(
   '/forget-email/send',
   [validateEmail, validateCallback],
-  UserController.sendEmailForEmail,
+  UserController.sendEmailWithAccountInfo,
 );
 // 이메일 발송 클릭 -> 임시 비밀번호 생성 후 이메일 발송
 // POST /api/users/forget-password/send
@@ -134,7 +133,7 @@ userRouter.patch(
   [validateUserIdParam, validateUserInfo, validateCallback],
   isLoggedIn, // 로그인 여부 파악
   isLoginUserInfo, // req.session.userid와 req.params.userId 일치 여부 검증
-  UserController.updateNameAndPhoneNumber,
+  UserController.updateNickname,
 );
 
 // 3. 비밀번호 변경

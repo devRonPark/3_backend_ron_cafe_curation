@@ -1,7 +1,7 @@
-const logger = require('../config/logger');
-const pool = require('../config/mysql');
+const logger = require('../../config/logger');
+const pool = require('../../config/mysql');
 
-class Cafe {
+class CafeService {
   static async saveDataFromPublicApi(cafeData) {
     // 중부원점 좌표계의 x, y 좌표 값 제거
     cafeData.forEach(cafeInfo => {
@@ -34,4 +34,4 @@ class Cafe {
     }
   }
 }
-module.exports = Cafe;
+module.exports = CafeService;
