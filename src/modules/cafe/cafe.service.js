@@ -75,6 +75,38 @@ class CafeService {
       throw new MySqlError(error.message);
     }
   }
+  static async getCafeDetailById(cafeId) {
+    const connection = await pool.getConnection();
+    try {
+      // cafes, menus, operating_hours 테이블 동시에 Inner Join
+      const queryString =
+        'select c.name, c.image_path, c.jibun_address, c.road_address, c.latitude, c.longitude, c.tel, c.created_at, m.name as menu_name, m.price from cafes as c inner join menus as m on c.id = m.cafe_id where c.id = ?';
+      const queryParams = [cafeId];
+      const [queryResult] = await connection.query(queryString, queryParams);
+      console.log(queryResult);
+      if (queryResult.length === 0) return 404;
+      return queryResult;
+    } catch (error) {
+      console.error(error);
+      throw new MySqlError(error.message);
+    }
+  }
+  static makeCafeDetailRes(queryResult) {
+    const resObj = { cafeData: {}, menuData: [] };
+    console.log(queryResult[0]);
+    for (const [key, value] of Object.entries(queryResult[0])) {
+      if (key === 'menu_name' || key === 'price') continue;
+      console.log(key, value);
+      resObj.cafeData[key] = value;
+    }
+    console.log(resObj);
+
+    for (const obj of queryResult) {
+      resObj.menuData.push({ name: obj.menu_name, price: obj.price });
+    }
+    console.log(resObj);
+    return resObj;
+  }
   static async saveDataFromPublicApi(cafeData) {
     // 중부원점 좌표계의 x, y 좌표 값 제거
     cafeData.forEach(cafeInfo => {

@@ -440,67 +440,13 @@ class CafeController {
   // 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
   static getCafeInfoById = async (req, res) => {
     const reqObj = { ...req.params };
-    const resObj = { message: [] };
     const { cafeId } = reqObj;
-    const queryString = {
-      cafes:
-        'select name, image_path, jibun_address, road_address, latitude, longitude, tel, created_at from cafes where id=?',
-      menus:
-        'select name, price from menus where cafe_id = ? and deleted_at is null',
-      operating_hours:
-        'select day, start_time, end_time, is_day_off from operating_hours where cafe_id = ? and deleted_at is null',
-    };
-    const queryParams = [cafeId];
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
 
-    try {
-      // cafes, menus, operating_hours 테이블 조회(inner join)
-      printSqlLog(queryString.cafes, queryParams);
-      const resultOfCafes = await connection.query(
-        queryString.cafes,
-        queryParams,
-      );
-      if (resultOfCafes[0].length === 0) {
-        resObj.message.push('CAFE_DETAIL_INFO_NOT_EXIST');
-      }
-      logger.info(`[CafeId ${cafeId}] CAFE_INFO_EXISTS`);
-      resObj.cafeData = resultOfCafes[0];
-      console.log('resObj: ', resObj);
+    const result = await CafeService.getCafeDetailById(cafeId);
+    if (result === 404) next(new InternalServerError('Cafe Info Not Found'));
 
-      printSqlLog(queryString.menus, queryParams);
-      const resultOfMenus = await connection.query(
-        queryString.menus,
-        queryParams,
-      );
-      if (resultOfMenus[0].length === 0) {
-        resObj.message.push('CAFE_MENU_INFO_NOT_EXIST');
-      } else {
-        logger.info(`[CafeId ${cafeId}] CAFE_MENU_INFO_EXISTS`);
-        resObj.menuData = resultOfMenus[0];
-      }
-      console.log('resObj: ', resObj);
-
-      printSqlLog(queryString.operating_hours, queryParams);
-      const resultOfOperHours = await connection.query(
-        queryString.operating_hours,
-        queryParams,
-      );
-      if (resultOfOperHours[0].length === 0) {
-        resObj.message.push('CAFE_OPERATING_HOURS_INFO_NOT_EXIST');
-      } else {
-        logger.info(`[CafeId ${cafeId}] CAFE_OPERATING_HOURS_INFO_EXISTS`);
-        resObj.operHoursData = resultOfOperHours[0];
-      }
-      console.log('resObj: ', resObj);
-      await connection.commit();
-      return res.status(successCode.OK).json(resObj);
-    } catch (error) {
-      await connection.rollback();
-      throw new InternalServerError(error.message);
-    } finally {
-      connection.release();
-    }
+    const resObj = CafeService.makeCafeDetailRes(result);
+    return res.status(successCode.OK).json(resObj);
   };
   // 카페 별 조회 수 조회
   static getCafeViewCount = async (req, res) => {
