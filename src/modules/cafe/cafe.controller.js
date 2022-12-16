@@ -36,19 +36,7 @@ class CafeController {
     await connection.beginTransaction();
 
     try {
-      // cafes 테이블 전체 rows 수 조회
-      // queryString.totalRows = `select TABLE_ROWS from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = ${process.env.DB_NAME} and TABLE_NAME = 'cafes'`;
-      // printSqlLog(queryString.totalRows);
-      // result.totalRows = await connection.query(queryString.totalRows);
-      // if (!result.totalRows[0][0].TABLE_ROWS) {
-      //   throw new NotFoundError('TotalRows is not selected where cafes table');
-      // }
-      // if (result.totalRows[0].length > 0) {
-      //   logger.info('TotalRows successfully selected where cafes table');
-      // }
-      // const totalCount = result.totalRows[0][0].TABLE_ROWS; // 총 카페 데이터 수
-
-      queryString.cafeDataAtCurrPage = `select id, name, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${
+      queryString.cafeDataAtCurrPage = `select id, name, image_path, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${
         (currentPage - 1) * countPage
       }, ${countPage}  `;
       printSqlLog(queryString.cafeDataAtCurrPage);
@@ -203,7 +191,7 @@ class CafeController {
         // `select id, name, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${(currentPage - 1) * countPage}, ${countPage}  `;
         // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
         queryString =
-          'select id, name, jibun_address from cafes where name LIKE ? limit ?, ?';
+          'select id, name, image_path, jibun_address from cafes where name LIKE ? limit ?, ?';
         queryParams = [`%${name}%`, (currentPage - 1) * countPage, countPage];
         printSqlLog(queryString, queryParams);
         result = await connection.query(queryString, queryParams);
@@ -521,7 +509,7 @@ class CafeController {
     const { cafeId } = reqObj;
     const queryString = {
       cafes:
-        'select name, jibun_address, road_address, latitude, longitude, tel, created_at from cafes where id=?',
+        'select name, image_path, jibun_address, road_address, latitude, longitude, tel, created_at from cafes where id=?',
       menus:
         'select name, price from menus where cafe_id = ? and deleted_at is null',
       operating_hours:
