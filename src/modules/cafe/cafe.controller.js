@@ -25,6 +25,7 @@ class CafeController {
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
 
     const result = await CafeService.getCafeList(currentPage, countPage);
+    console.log(result);
     if (result === 404) return next(new NotFoundError('Cafe data not found'));
     return res.status(successCode.OK).json(result);
   };
@@ -438,7 +439,7 @@ class CafeController {
   };
 
   // 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
-  static getCafeInfoById = async (req, res) => {
+  static getCafeInfoById = async (req, res, next) => {
     const reqObj = { ...req.params };
     const { cafeId } = reqObj;
 
@@ -447,32 +448,6 @@ class CafeController {
 
     const resObj = CafeService.makeCafeDetailRes(result);
     return res.status(successCode.OK).json(resObj);
-  };
-  // 카페 별 조회 수 조회
-  static getCafeViewCount = async (req, res) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
-
-    let { cafeId } = reqObj;
-    cafeId = parseInt(cafeId, 10);
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString = 'select views from cafes where id = ?';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const cafeInfo = result[0][0];
-      console.log('cafeInfo: ', cafeInfo);
-
-      resObj.views = cafeInfo.views;
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (err) {
-      logger.info(err.message);
-      throw new InternalServerError(err.message);
-    }
   };
 
   // 카페 별 조회 수 조회
@@ -483,6 +458,7 @@ class CafeController {
     let { cafeId, views } = reqObj;
     cafeId = parseInt(cafeId, 10);
 
+    console.log('views: ', views);
     // 조회 수 증가
     const viewCount = views + 1;
 

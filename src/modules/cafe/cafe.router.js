@@ -142,15 +142,6 @@ cafeRouter.delete(
   CafeController.disableCafeLike,
 );
 
-// 카페 조회 수 조회
-// GET /api/cafes/:cafeId/views
-cafeRouter.get(
-  '/:cafeId/views',
-  [validateCafeIdParam, validateCallback],
-  isCafeInfoExistById,
-  CafeController.getCafeViewCount,
-);
-
 // 카페 조회 수 + 1
 // POST /api/cafes/:cafeId/views
 // body: viewCount

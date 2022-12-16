@@ -20,6 +20,8 @@ class CafeService {
     } catch (error) {
       console.error(error);
       throw new MySqlError(error.message);
+    } finally {
+      await connection.release();
     }
   }
   static getQueryParams(searchOption) {
@@ -49,6 +51,8 @@ class CafeService {
     } catch (error) {
       console.error(error);
       throw new MySqlError(error.message);
+    } finally {
+      await connection.release();
     }
   }
   static async getCafeListByAddress(pageNumber, itemCount, { gu, dong }) {
@@ -73,6 +77,8 @@ class CafeService {
     } catch (error) {
       console.error(error);
       throw new MySqlError(error.message);
+    } finally {
+      await connection.release();
     }
   }
   static async getCafeDetailById(cafeId) {
@@ -80,15 +86,17 @@ class CafeService {
     try {
       // cafes, menus, operating_hours 테이블 동시에 Inner Join
       const queryString =
-        'select c.name, c.image_path, c.jibun_address, c.road_address, c.latitude, c.longitude, c.tel, c.created_at, m.name as menu_name, m.price from cafes as c inner join menus as m on c.id = m.cafe_id where c.id = ?';
+        'select c.name, c.image_path, c.jibun_address, c.road_address, c.latitude, c.longitude, c.tel, c.created_at, c.views, m.name as menu_name, m.price from cafes as c left join menus as m on c.id = m.cafe_id where c.id = ?';
       const queryParams = [cafeId];
-      const [queryResult] = await connection.query(queryString, queryParams);
-      console.log(queryResult);
+      const [queryResult] = await connection.execute(queryString, queryParams);
+
       if (queryResult.length === 0) return 404;
       return queryResult;
     } catch (error) {
       console.error(error);
       throw new MySqlError(error.message);
+    } finally {
+      await connection.release();
     }
   }
   static makeCafeDetailRes(queryResult) {
@@ -102,7 +110,9 @@ class CafeService {
     console.log(resObj);
 
     for (const obj of queryResult) {
-      resObj.menuData.push({ name: obj.menu_name, price: obj.price });
+      if (obj.menu_name !== null && obj.price !== null) {
+        resObj.menuData.push({ name: obj.menu_name, price: obj.price });
+      }
     }
     console.log(resObj);
     return resObj;
