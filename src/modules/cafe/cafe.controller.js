@@ -23,56 +23,10 @@ class CafeController {
   static getCafeDataByPage = async (req, res, next) => {
     const currentPage = req.query.page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
-    const queryString = {
-      totalRows: '',
-      cafeDataAtCurrPage: '',
-    };
-    const result = {
-      totalRows: '',
-      cafeDataAtCurrPage: '',
-    };
 
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    try {
-      // cafes 테이블 전체 rows 수 조회
-      // queryString.totalRows = `select TABLE_ROWS from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = ${process.env.DB_NAME} and TABLE_NAME = 'cafes'`;
-      // printSqlLog(queryString.totalRows);
-      // result.totalRows = await connection.query(queryString.totalRows);
-      // if (!result.totalRows[0][0].TABLE_ROWS) {
-      //   throw new NotFoundError('TotalRows is not selected where cafes table');
-      // }
-      // if (result.totalRows[0].length > 0) {
-      //   logger.info('TotalRows successfully selected where cafes table');
-      // }
-      // const totalCount = result.totalRows[0][0].TABLE_ROWS; // 총 카페 데이터 수
-
-      queryString.cafeDataAtCurrPage = `select id, name, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${
-        (currentPage - 1) * countPage
-      }, ${countPage}  `;
-      printSqlLog(queryString.cafeDataAtCurrPage);
-      result.cafeDataAtCurrPage = await connection.query(
-        queryString.cafeDataAtCurrPage,
-      );
-      if (result.cafeDataAtCurrPage[0].length === 0) {
-        throw new NotFoundError('Cafe into not found');
-      }
-      if (result.cafeDataAtCurrPage[0].length > 0) {
-        logger.info('successfully selected where cafes table');
-      }
-
-      await connection.commit();
-      return res
-        .status(successCode.OK)
-        .json(/* totalCount: totalCount, */ result.cafeDataAtCurrPage[0]);
-    } catch (error) {
-      console.log(error);
-      await connection.rollback();
-      throw new MySqlError(error.message);
-    } finally {
-      connection.release();
-    }
+    const result = await CafeService.getCafeList(currentPage, countPage);
+    if (result === 404) return next(new NotFoundError('Cafe data not found'));
+    return res.status(successCode.OK).json(result);
   };
   // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
   static getDataFromPublicAPI = async (req, res, next) => {
@@ -190,56 +144,25 @@ class CafeController {
   // req.query.name | req.query.city, req.query.gu, req.query.dong
   static getCafeDataBySearch = async (req, res, next) => {
     let { name, city, gu, dong, page } = req.query;
-    let queryString, queryParams, result;
     const currentPage = page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
-    const connection = await pool.getConnection();
+    let result;
 
-    try {
-      // req.query.name 검증
-      if (name) {
-        name = name.trim(); // 앞뒤 공백 제거
-        console.log('name: ', name);
-        // `select id, name, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${(currentPage - 1) * countPage}, ${countPage}  `;
-        // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
-        queryString =
-          'select id, name, jibun_address from cafes where name LIKE ? limit ?, ?';
-        queryParams = [`%${name}%`, (currentPage - 1) * countPage, countPage];
-        printSqlLog(queryString, queryParams);
-        result = await connection.query(queryString, queryParams);
-        if (result[0].length < 1) {
-          return next(new NotFoundError('Cafe data not found'));
-        }
-        logger.info(`${result[0].length} cafe data is successfully searched.`);
-        return res.status(successCode.OK).json(result[0]);
-      }
-      // FIX 동 선택 없이 구 선택만 하는 경우도 고려해야 함.
-      if (city && gu && dong) {
-        city = city.trim(); // 앞뒤 공백 제거
-        gu = gu.trim(); // 앞뒤 공백 제거
-        dong = dong.trim(); // 앞뒤 공백 제거
-
-        // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
-        queryString =
-          'select id, name, jibun_address, image_path from cafes where jibun_address LIKE ? limit ?, ?';
-        queryParams = [
-          `%${city} ${gu} ${dong}%`,
-          (currentPage - 1) * countPage,
-          countPage,
-        ];
-        printSqlLog(queryString, queryParams);
-        result = await connection.query(queryString, queryParams);
-        if (result[0].length < 1) {
-          return next(new NotFoundError('Cafe data not found'));
-        }
-        logger.info(`${result[0].length} cafe data is successfully searched.`);
-        return res.status(successCode.OK).json(result[0]);
-      }
-    } catch (error) {
-      throw new InternalServerError(error.message);
-    } finally {
-      connection.release();
+    if (name) {
+      result = await CafeService.getCafeListByName(
+        currentPage,
+        countPage,
+        name.trim(),
+      );
+    } else if (city && gu && dong) {
+      result = await CafeService.getCafeListByAddress(currentPage, countPage, {
+        gu: gu.trim(),
+        dong: dong.trim(),
+      });
     }
+
+    if (result === 404) return next(new NotFoundError('Cafe data not found'));
+    return res.status(successCode.OK).json(result);
   };
 
   // 리뷰 등록
@@ -517,67 +440,13 @@ class CafeController {
   // 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
   static getCafeInfoById = async (req, res) => {
     const reqObj = { ...req.params };
-    const resObj = { message: [] };
     const { cafeId } = reqObj;
-    const queryString = {
-      cafes:
-        'select name, jibun_address, road_address, latitude, longitude, tel, created_at from cafes where id=?',
-      menus:
-        'select name, price from menus where cafe_id = ? and deleted_at is null',
-      operating_hours:
-        'select day, start_time, end_time, is_day_off from operating_hours where cafe_id = ? and deleted_at is null',
-    };
-    const queryParams = [cafeId];
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
 
-    try {
-      // cafes, menus, operating_hours 테이블 조회(inner join)
-      printSqlLog(queryString.cafes, queryParams);
-      const resultOfCafes = await connection.query(
-        queryString.cafes,
-        queryParams,
-      );
-      if (resultOfCafes[0].length === 0) {
-        resObj.message.push('CAFE_DETAIL_INFO_NOT_EXIST');
-      }
-      logger.info(`[CafeId ${cafeId}] CAFE_INFO_EXISTS`);
-      resObj.cafeData = resultOfCafes[0];
-      console.log('resObj: ', resObj);
+    const result = await CafeService.getCafeDetailById(cafeId);
+    if (result === 404) next(new InternalServerError('Cafe Info Not Found'));
 
-      printSqlLog(queryString.menus, queryParams);
-      const resultOfMenus = await connection.query(
-        queryString.menus,
-        queryParams,
-      );
-      if (resultOfMenus[0].length === 0) {
-        resObj.message.push('CAFE_MENU_INFO_NOT_EXIST');
-      } else {
-        logger.info(`[CafeId ${cafeId}] CAFE_MENU_INFO_EXISTS`);
-        resObj.menuData = resultOfMenus[0];
-      }
-      console.log('resObj: ', resObj);
-
-      printSqlLog(queryString.operating_hours, queryParams);
-      const resultOfOperHours = await connection.query(
-        queryString.operating_hours,
-        queryParams,
-      );
-      if (resultOfOperHours[0].length === 0) {
-        resObj.message.push('CAFE_OPERATING_HOURS_INFO_NOT_EXIST');
-      } else {
-        logger.info(`[CafeId ${cafeId}] CAFE_OPERATING_HOURS_INFO_EXISTS`);
-        resObj.operHoursData = resultOfOperHours[0];
-      }
-      console.log('resObj: ', resObj);
-      await connection.commit();
-      return res.status(successCode.OK).json(resObj);
-    } catch (error) {
-      await connection.rollback();
-      throw new InternalServerError(error.message);
-    } finally {
-      connection.release();
-    }
+    const resObj = CafeService.makeCafeDetailRes(result);
+    return res.status(successCode.OK).json(resObj);
   };
   // 카페 별 조회 수 조회
   static getCafeViewCount = async (req, res) => {

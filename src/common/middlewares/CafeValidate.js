@@ -226,7 +226,7 @@ class CafeInfoValidator {
         .trim()
         .matches(/^[가-힣]+$/)
         .withMessage('Only hangeul is allowed')
-        .isIn(['서울특별시'])
+        .isIn(['서울'])
         .run(req);
 
       await query('gu')
