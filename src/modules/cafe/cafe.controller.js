@@ -23,44 +23,10 @@ class CafeController {
   static getCafeDataByPage = async (req, res, next) => {
     const currentPage = req.query.page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
-    const queryString = {
-      totalRows: '',
-      cafeDataAtCurrPage: '',
-    };
-    const result = {
-      totalRows: '',
-      cafeDataAtCurrPage: '',
-    };
 
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    try {
-      queryString.cafeDataAtCurrPage = `select id, name, image_path, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${
-        (currentPage - 1) * countPage
-      }, ${countPage}  `;
-      printSqlLog(queryString.cafeDataAtCurrPage);
-      result.cafeDataAtCurrPage = await connection.query(
-        queryString.cafeDataAtCurrPage,
-      );
-      if (result.cafeDataAtCurrPage[0].length === 0) {
-        throw new NotFoundError('Cafe into not found');
-      }
-      if (result.cafeDataAtCurrPage[0].length > 0) {
-        logger.info('successfully selected where cafes table');
-      }
-
-      await connection.commit();
-      return res
-        .status(successCode.OK)
-        .json(/* totalCount: totalCount, */ result.cafeDataAtCurrPage[0]);
-    } catch (error) {
-      console.log(error);
-      await connection.rollback();
-      throw new MySqlError(error.message);
-    } finally {
-      connection.release();
-    }
+    const result = await CafeService.getCafeList(currentPage, countPage);
+    if (result === 404) throw new NotFoundError('Cafe into not found');
+    return res.status(successCode.OK).json(result);
   };
   // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
   static getDataFromPublicAPI = async (req, res, next) => {

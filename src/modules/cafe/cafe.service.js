@@ -2,6 +2,24 @@ const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 
 class CafeService {
+  static async getCafeList(pageNumber, itemCount) {
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString = `select id, name, image_path, jibun_address, road_address from cafes order by id desc limit ?, ?`;
+      const queryParams = [(pageNumber - 1) * itemCount, itemCount];
+      const [queryResult] = await connection.query(queryString, queryParams);
+      printSqlLog(queryStringString, queryParams);
+
+      if (queryResult.length === 0) return 404;
+
+      console.log(queryResult);
+      return queryResult;
+    } catch (e) {
+      console.log(error);
+      throw new MySqlError(error.message);
+    }
+  }
   static async saveDataFromPublicApi(cafeData) {
     // 중부원점 좌표계의 x, y 좌표 값 제거
     cafeData.forEach(cafeInfo => {
