@@ -1,3 +1,5 @@
+const MySqlError = require('../../common/errors/mysql.error');
+const { printSqlLog } = require('../../common/util');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 
@@ -9,14 +11,67 @@ class CafeService {
       const queryString = `select id, name, image_path, jibun_address, road_address from cafes order by id desc limit ?, ?`;
       const queryParams = [(pageNumber - 1) * itemCount, itemCount];
       const [queryResult] = await connection.query(queryString, queryParams);
-      printSqlLog(queryStringString, queryParams);
+      printSqlLog(queryString, queryParams);
 
       if (queryResult.length === 0) return 404;
 
       console.log(queryResult);
       return queryResult;
-    } catch (e) {
-      console.log(error);
+    } catch (error) {
+      console.error(error);
+      throw new MySqlError(error.message);
+    }
+  }
+  static getQueryParams(searchOption) {
+    if (searchOption.type === 'name') {
+      return [];
+    } else if (searchOption.type === 'address') {
+    }
+  }
+  static async getCafeListByName(pageNumber, itemCount, name) {
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select id, name, image_path, road_address, jibun_address from cafes where name LIKE ? limit ?, ?';
+      const queryParams = [
+        `%${name}%`,
+        (pageNumber - 1) * itemCount,
+        itemCount,
+      ];
+      const [queryResult] = await connection.query(queryString, queryParams);
+      printSqlLog(queryString, queryParams);
+
+      if (queryResult.length === 0) return 404;
+
+      console.log(queryResult);
+      return queryResult;
+    } catch (error) {
+      console.error(error);
+      throw new MySqlError(error.message);
+    }
+  }
+  static async getCafeListByAddress(pageNumber, itemCount, { gu, dong }) {
+    const connection = await pool.getConnection();
+
+    try {
+      const queryString =
+        'select id, name, road_address, jibun_address, image_path from cafes where jibun_address LIKE ? and road_address LIKE ? limit ?, ?';
+      const queryParams = [
+        `%${dong}%`,
+        `%${gu}%`,
+        (pageNumber - 1) * itemCount,
+        itemCount,
+      ];
+      const [queryResult] = await connection.query(queryString, queryParams);
+      printSqlLog(queryString, queryParams);
+
+      if (queryResult.length === 0) return 404;
+
+      console.log(queryResult);
+      return queryResult;
+    } catch (error) {
+      console.error(error);
       throw new MySqlError(error.message);
     }
   }

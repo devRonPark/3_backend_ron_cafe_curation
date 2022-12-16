@@ -25,7 +25,7 @@ class CafeController {
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
 
     const result = await CafeService.getCafeList(currentPage, countPage);
-    if (result === 404) throw new NotFoundError('Cafe into not found');
+    if (result === 404) return next(new NotFoundError('Cafe data not found'));
     return res.status(successCode.OK).json(result);
   };
   // 오픈 API 호출해서 데이터 가져와 가공 후 응답으로 전달
@@ -144,56 +144,25 @@ class CafeController {
   // req.query.name | req.query.city, req.query.gu, req.query.dong
   static getCafeDataBySearch = async (req, res, next) => {
     let { name, city, gu, dong, page } = req.query;
-    let queryString, queryParams, result;
     const currentPage = page.trim(); // 현재 페이지
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
-    const connection = await pool.getConnection();
+    let result;
 
-    try {
-      // req.query.name 검증
-      if (name) {
-        name = name.trim(); // 앞뒤 공백 제거
-        console.log('name: ', name);
-        // `select id, name, jibun_address, road_address, latitude, longitude from cafes order by id desc limit ${(currentPage - 1) * countPage}, ${countPage}  `;
-        // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
-        queryString =
-          'select id, name, image_path, jibun_address from cafes where name LIKE ? limit ?, ?';
-        queryParams = [`%${name}%`, (currentPage - 1) * countPage, countPage];
-        printSqlLog(queryString, queryParams);
-        result = await connection.query(queryString, queryParams);
-        if (result[0].length < 1) {
-          return next(new NotFoundError('Cafe data not found'));
-        }
-        logger.info(`${result[0].length} cafe data is successfully searched.`);
-        return res.status(successCode.OK).json(result[0]);
-      }
-      // FIX 동 선택 없이 구 선택만 하는 경우도 고려해야 함.
-      if (city && gu && dong) {
-        city = city.trim(); // 앞뒤 공백 제거
-        gu = gu.trim(); // 앞뒤 공백 제거
-        dong = dong.trim(); // 앞뒤 공백 제거
-
-        // 특정 문자가 포함되어 있는 데이터 검색 시 LIKE 연산자 사용
-        queryString =
-          'select id, name, jibun_address, image_path from cafes where jibun_address LIKE ? limit ?, ?';
-        queryParams = [
-          `%${city} ${gu} ${dong}%`,
-          (currentPage - 1) * countPage,
-          countPage,
-        ];
-        printSqlLog(queryString, queryParams);
-        result = await connection.query(queryString, queryParams);
-        if (result[0].length < 1) {
-          return next(new NotFoundError('Cafe data not found'));
-        }
-        logger.info(`${result[0].length} cafe data is successfully searched.`);
-        return res.status(successCode.OK).json(result[0]);
-      }
-    } catch (error) {
-      throw new InternalServerError(error.message);
-    } finally {
-      connection.release();
+    if (name) {
+      result = await CafeService.getCafeListByName(
+        currentPage,
+        countPage,
+        name.trim(),
+      );
+    } else if (city && gu && dong) {
+      result = await CafeService.getCafeListByAddress(currentPage, countPage, {
+        gu: gu.trim(),
+        dong: dong.trim(),
+      });
     }
+
+    if (result === 404) return next(new NotFoundError('Cafe data not found'));
+    return res.status(successCode.OK).json(result);
   };
 
   // 리뷰 등록
