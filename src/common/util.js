@@ -171,3 +171,6 @@ exports.encryptPassword = password => {
   const salt = bcrypt.genSaltSync(saltRounds);
   return bcrypt.hashSync(password, salt);
 };
+
+export const sendError = (statusCode, errorObj) =>
+  res.status(statusCode).send(errorObj);
