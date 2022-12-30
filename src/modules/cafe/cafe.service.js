@@ -1,54 +1,37 @@
+const InternalServerError = require('../../common/errors/internal-sever.error');
 const MySqlError = require('../../common/errors/mysql.error');
+const { select } = require('../../common/utils/queries');
 const { printSqlLog } = require('../../common/utils/util');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 
 class CafeService {
   static async getCafeList(pageNumber, itemCount) {
-    const connection = await pool.getConnection();
-
     try {
-      const queryString = `select id, name, image_path, jibun_address, road_address from cafes order by id desc limit ?, ?`;
-      const queryParams = [(pageNumber - 1) * itemCount, itemCount];
-      const [queryResult] = await connection.query(queryString, queryParams);
-      printSqlLog(queryString, queryParams);
+      const queryResult = await select(
+        'select id, name, image_path, jibun_address, road_address from cafes order by id desc limit ?, ?',
+        [(pageNumber - 1) * itemCount, itemCount],
+      );
 
       if (queryResult.length === 0) return 404;
-
-      console.log(queryResult);
       return queryResult;
     } catch (error) {
-      console.error(error);
-      throw new MySqlError(error.message);
-    }
-  }
-  static getQueryParams(searchOption) {
-    if (searchOption.type === 'name') {
-      return [];
-    } else if (searchOption.type === 'address') {
+      logger.error(error);
+      return 500;
     }
   }
   static async getCafeListByName(pageNumber, itemCount, name) {
-    const connection = await pool.getConnection();
-
     try {
-      const queryString =
-        'select id, name, image_path, road_address, jibun_address from cafes where name LIKE ? limit ?, ?';
-      const queryParams = [
-        `%${name}%`,
-        (pageNumber - 1) * itemCount,
-        itemCount,
-      ];
-      const [queryResult] = await connection.query(queryString, queryParams);
-      printSqlLog(queryString, queryParams);
+      const queryResult = await select(
+        'select id, name, image_path, road_address, jibun_address from cafes where name LIKE ? limit ?, ?',
+        [`%${name}%`, (pageNumber - 1) * itemCount, itemCount],
+      );
 
       if (queryResult.length === 0) return 404;
-
-      console.log(queryResult);
       return queryResult;
     } catch (error) {
-      console.error(error);
-      throw new MySqlError(error.message);
+      logger.error(error);
+      throw 500;
     }
   }
   static async getCafeListByAddress(pageNumber, itemCount, { gu, dong }) {

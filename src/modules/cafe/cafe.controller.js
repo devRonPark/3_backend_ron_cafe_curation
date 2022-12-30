@@ -1,10 +1,4 @@
-const axios = require('axios');
-const fs = require('fs');
-const {
-  convertLocationData,
-  printSqlLog,
-  printCurrentTime,
-} = require('../../common/utils/util');
+const { printSqlLog, printCurrentTime } = require('../../common/utils/util');
 const CafeService = require('./cafe.service');
 const {
   successCode,
@@ -16,16 +10,15 @@ const NotFoundError = require('../../common/errors/not-found.error');
 const MySqlError = require('../../common/errors/mysql.error');
 const ClientError = require('../../common/errors/client.error.js');
 const InternalServerError = require('../../common/errors/internal-sever.error');
-const config = require('../../config/config');
 
 class CafeController {
   // 페이지 별 카페 데이터 조회
   static getCafeDataByPage = async (req, res, next) => {
-    const currentPage = req.query.page.trim(); // 현재 페이지
-    const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
-
-    const result = await CafeService.getCafeList(currentPage, countPage);
-    if (result === 404) return next(new NotFoundError('Cafe data not found'));
+    const result = await CafeService.getCafeList(req.query.page.trim(), 10);
+    if (result === 404)
+      return next(new NotFoundError('찾고자 하는 리소스가 존재하지 않음'));
+    else if (result === 500)
+      return next(new InternalServerError('알 수 없는 서버 오류'));
     return res.status(successCode.OK).json(result);
   };
   // req 객체에 저장된 데이터 DB에 저장
