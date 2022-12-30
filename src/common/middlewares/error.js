@@ -1,60 +1,46 @@
-import { errorObj, sendError } from '../utils/error';
+const { errorObj, sendError } = require('../utils/error');
 
-export const notFoundErrorHandler = (err, req, res, next) => {
+const devModeErrorHandler = (err, req, res, next) => {
   if (err instanceof NotFoundError) {
     return sendError(errorCode.NOT_FOUND, errorObj(errorCode.NOT_FOUND, err));
-  }
-  next(err);
-};
-
-export const unauthorizedErrorHandler = (err, req, res, next) => {
-  if (err instanceof UnauthorizedError) {
+  } else if (err instanceof UnauthorizedError) {
     return sendError(
       errorCode.UNAUTHORIZED,
       errorObj(errorCode.UNAUTHORIZED, err),
     );
-  }
-  next(err);
-};
-
-export const alreadyInUseErrorHandler = (err, req, res, next) => {
-  if (err instanceof AlreadyInUseError) {
+  } else if (err instanceof AlreadyInUseError) {
     return sendError(errorCode.CONFLICT, errorObj(errorCode.CONFLICT, err));
-  }
-  next(err);
-};
-
-export const validationErrorHandler = (err, req, res, next) => {
-  if (err instanceof ValidationError) {
+  } else if (err instanceof ValidationError) {
     return sendError(
       errorCode.BAD_REQUEST,
       errorObj(errorCode.BAD_REQUEST, err),
     );
-  }
-  next(err);
-};
-
-export const clientErrorHandler = (err, req, res, next) => {
-  if (err instanceof ClientError) {
+  } else if (err instanceof ClientError) {
     return sendError(
       errorCode.BAD_REQUEST,
       errorObj(errorCode.BAD_REQUEST, err),
     );
-  }
-  next(err);
-};
-
-export const internalServerErrorHandler = (err, req, res, next) => {
-  if (err instanceof MySqlError || err instanceof InternalServerError) {
+  } else if (err instanceof MySqlError || err instanceof InternalServerError) {
     return sendError(
       errorCode.INTERNAL_SERVER_ERROR,
       errorObj(errorCode.INTERNAL_SERVER_ERROR, err),
     );
   }
+
   next(err);
 };
 
-export const productionErrorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, next) => {
+  const mode = process.env.NODE_ENV;
+  // 배포/개발 환경에 따른 에러 핸들러 분리
+  if (mode === 'production') {
+    prodModeErrorHandler(err, req, res, next);
+  } else {
+    devModeErrorHandler(err, req, res, next);
+  }
+};
+
+const prodModeErrorHandler = (err, req, res, next) => {
   let errorObj = {};
   if (res.headersSent) {
     return next(err);
@@ -72,12 +58,4 @@ export const productionErrorHandler = (err, req, res, next) => {
   }
 };
 
-export default {
-  notFoundErrorHandler,
-  unauthorizedErrorHandler,
-  alreadyInUseErrorHandler,
-  validationErrorHandler,
-  clientErrorHandler,
-  internalServerErrorHandler,
-  productionErrorHandler,
-};
+module.exports = errorHandler;

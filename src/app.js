@@ -7,17 +7,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const config = require('./config/config');
 const sessionStore = require('./config/sessionStore');
-const { errorCode } = require('./common/statusCodes/statusCode');
 const { deleteImage } = require('./common/middlewares/ImageDelete');
-const {
-  ValidationError,
-  AlreadyInUseError,
-  NotFoundError,
-  MySqlError,
-  InternalServerError,
-  UnauthorizedError,
-  ClientError,
-} = require('./common/errors');
 
 const adminRouter = require('./modules/admin/admin.router');
 const userRouter = require('./modules/user/user.router');
@@ -31,15 +21,7 @@ const app = express();
 global.logger || (global.logger = require('./config/logger'));
 const morganMiddleware = require('./config/morganMiddleware');
 const logger = require('./config/logger');
-const {
-  notFoundErrorHandler,
-  unauthorizedErrorHandler,
-  alreadyInUseErrorHandler,
-  validationErrorHandler,
-  clientErrorHandler,
-  internalServerErrorHandler,
-  productionErrorHandler,
-} = require('./common/middlewares/error');
+const errorHandler = require('./common/middlewares/error');
 
 app.use(
   morganMiddleware,
@@ -75,16 +57,7 @@ app.use('/api/cafes', cafeRouter);
 app.use('/api/admin', adminRouter);
 
 // error handlers
-app.use(
-  notFoundErrorHandler,
-  unauthorizedErrorHandler,
-  alreadyInUseErrorHandler,
-  validationErrorHandler,
-  clientErrorHandler,
-  internalServerErrorHandler,
-  internalServerErrorHandler,
-  productionErrorHandler,
-);
+app.use(errorHandler);
 // 에러 로깅 미들웨어
 app.use(function errorLogger(err, req, res, next) {
   if (req.file) {
