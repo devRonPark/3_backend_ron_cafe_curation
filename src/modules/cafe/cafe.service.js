@@ -1,7 +1,5 @@
-const InternalServerError = require('../../common/errors/internal-sever.error');
 const MySqlError = require('../../common/errors/mysql.error');
 const { select } = require('../../common/utils/queries');
-const { printSqlLog } = require('../../common/utils/util');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 
@@ -35,27 +33,17 @@ class CafeService {
     }
   }
   static async getCafeListByAddress(pageNumber, itemCount, { gu, dong }) {
-    const connection = await pool.getConnection();
-
     try {
-      const queryString =
-        'select id, name, road_address, jibun_address, image_path from cafes where jibun_address LIKE ? and road_address LIKE ? limit ?, ?';
-      const queryParams = [
-        `%${dong}%`,
-        `%${gu}%`,
-        (pageNumber - 1) * itemCount,
-        itemCount,
-      ];
-      const [queryResult] = await connection.query(queryString, queryParams);
-      printSqlLog(queryString, queryParams);
+      const queryResult = await select(
+        'select id, name, road_address, jibun_address, image_path from cafes where jibun_address LIKE ? and road_address LIKE ? limit ?, ?',
+        [`%${dong}%`, `%${gu}%`, (pageNumber - 1) * itemCount, itemCount],
+      );
 
       if (queryResult.length === 0) return 404;
-
-      console.log(queryResult);
       return queryResult;
     } catch (error) {
-      console.error(error);
-      throw new MySqlError(error.message);
+      logger.error(error);
+      return 500;
     }
   }
   static async getCafeDetailById(cafeId) {
@@ -89,37 +77,6 @@ class CafeService {
     }
     console.log(resObj);
     return resObj;
-  }
-  static async saveDataFromPublicApi(cafeData) {
-    // 중부원점 좌표계의 x, y 좌표 값 제거
-    cafeData.forEach(cafeInfo => {
-      delete cafeInfo.xCoordinate;
-      delete cafeInfo.yCoordinate;
-    });
-
-    const connection = await pool.getConnection();
-    connection.beginTransaction();
-    try {
-      const queryString =
-        'update cafes set latitude=?, longitude=? where name = ?';
-      cafeData.forEach(async cafeInfo => {
-        const queryParams = [
-          cafeInfo.latitude,
-          cafeInfo.longitude,
-          cafeInfo.name,
-        ];
-        // 카페 정보 DB에 저장
-        const result = await connection.execute(queryString, queryParams);
-      });
-      await connection.commit();
-      return { state: true };
-    } catch (err) {
-      await connection.rollback();
-      logger.error(err.stack);
-      throw new Error(err.message);
-    } finally {
-      connection.release();
-    }
   }
 }
 module.exports = CafeService;

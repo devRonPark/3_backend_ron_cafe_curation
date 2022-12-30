@@ -10,30 +10,16 @@ const NotFoundError = require('../../common/errors/not-found.error');
 const MySqlError = require('../../common/errors/mysql.error');
 const ClientError = require('../../common/errors/client.error.js');
 const InternalServerError = require('../../common/errors/internal-sever.error');
+const { errorMsgKor } = require('../../common/constants');
 
 class CafeController {
   // 페이지 별 카페 데이터 조회
   static getCafeDataByPage = async (req, res, next) => {
     const result = await CafeService.getCafeList(req.query.page.trim(), 10);
-    if (result === 404)
-      return next(new NotFoundError('찾고자 하는 리소스가 존재하지 않음'));
+    if (result === 404) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
     else if (result === 500)
-      return next(new InternalServerError('알 수 없는 서버 오류'));
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
     return res.status(successCode.OK).json(result);
-  };
-  // req 객체에 저장된 데이터 DB에 저장
-  static saveDataToDb = async (req, res, next) => {
-    try {
-      const { cafeData } = req;
-      const response = await CafeService.saveDataFromPublicApi(cafeData);
-      logger.info('response: ', response);
-      return res.sendStatus(successCode.CREATED);
-    } catch (err) {
-      logger.error(err.stack);
-      return res
-        .status(errorCode.INTERNALSERVERERROR)
-        .json({ message: err.message });
-    }
   };
   // 쿼리로 들어오는 검색 조건 값 검증
   // req.query.name | req.query.city, req.query.gu, req.query.dong
@@ -43,6 +29,7 @@ class CafeController {
     const countPage = 10; // 요청 한 번 당 보여줄 카페 정보 수
     let result;
 
+    // 검색 옵션에 따라 실행되는 서비스 로직이 다름.
     if (name) {
       result = await CafeService.getCafeListByName(
         currentPage,
@@ -56,7 +43,9 @@ class CafeController {
       });
     }
 
-    if (result === 404) return next(new NotFoundError('Cafe data not found'));
+    if (result === 404) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
+    else if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
     return res.status(successCode.OK).json(result);
   };
 
