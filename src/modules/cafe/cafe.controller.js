@@ -4,7 +4,7 @@ const {
   convertLocationData,
   printSqlLog,
   printCurrentTime,
-} = require('../../common/util');
+} = require('../../common/utils/util');
 const CafeService = require('./cafe.service');
 const {
   successCode,

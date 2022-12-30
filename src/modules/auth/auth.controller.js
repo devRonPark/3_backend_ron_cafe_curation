@@ -2,13 +2,16 @@ const logger = require('../../config/logger');
 const bcrypt = require('bcrypt');
 const moment = require('moment');
 const { successCode } = require('../../common/statusCodes/statusCode');
-const { generateRandomNumber, printSqlLog } = require('../../common/util');
+const {
+  generateRandomNumber,
+  printSqlLog,
+} = require('../../common/utils/util');
 const { sendMailRun } = require('../../config/smtpTransporter');
 const InternalServerError = require('../../common/errors/internal-sever.error');
 const NotFoundError = require('../../common/errors/not-found.error');
 const AlreadyInUseError = require('../../common/errors/already-in-use.error');
 const pool = require('../../config/mysql');
-const { convertToDateTimeFormat } = require('../../common/util');
+const { convertToDateTimeFormat } = require('../../common/utils/util');
 const AuthService = require('./auth.service');
 const { messages } = require('../../common/errors/message');
 const config = require('../../config/config');

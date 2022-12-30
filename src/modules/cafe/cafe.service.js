@@ -1,5 +1,5 @@
 const MySqlError = require('../../common/errors/mysql.error');
-const { printSqlLog } = require('../../common/util');
+const { printSqlLog } = require('../../common/utils/util');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 

@@ -4,7 +4,7 @@ const NotFoundError = require('../errors/not-found.error');
 const AlreadyInUseError = require('../errors/already-in-use.error');
 const pool = require('../../config/mysql');
 const { guListInSeoul } = require('../constants');
-const { printSqlLog } = require('../util');
+const { printSqlLog } = require('../utils/util');
 const logger = require('../../config/logger');
 const InternalServerError = require('../errors/internal-sever.error');
 

@@ -1,6 +1,9 @@
 const logger = require('../../config/logger');
 const DB = require('../../config/mysql');
-const { convertToDateTimeFormat, printSqlLog } = require('../../common/util');
+const {
+  convertToDateTimeFormat,
+  printSqlLog,
+} = require('../../common/utils/util');
 const pool = require('../../config/mysql');
 
 class AuthService {

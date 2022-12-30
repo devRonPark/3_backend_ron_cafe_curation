@@ -2,7 +2,7 @@ const express = require('express');
 
 const userRouter = express.Router();
 const UserController = require('./user.controller');
-const { isLoggedIn, isLoginUserInfo } = require('../../common/util');
+const { isLoggedIn, isLoginUserInfo } = require('../../common/utils/util');
 const {
   validateUserInfo,
   validateUserId,

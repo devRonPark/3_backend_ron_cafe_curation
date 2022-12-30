@@ -1,7 +1,7 @@
 const express = require('express');
 const CafeController = require('./cafe.controller');
 
-const { isLoggedIn } = require('../../common/util');
+const { isLoggedIn } = require('../../common/utils/util');
 const {
   isCafeInfoExistById,
   isCafeLikeActivated,
