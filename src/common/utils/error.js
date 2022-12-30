@@ -1,4 +1,4 @@
-const sendError = (statusCode, errorObj) =>
+const sendError = (res, statusCode, errorObj) =>
   res.status(statusCode).send(errorObj);
 const errorObj = (statusCode, err) => {
   return {
@@ -12,5 +12,10 @@ const mustOne = (arr, err) => {
 
   return arr[0];
 };
+const mustBeMoreThanOne = (arr, err) => {
+  if (arr.length === 0) throw err;
 
-module.exports = { sendError, errorObj, mustOne };
+  return arr;
+};
+
+module.exports = { sendError, errorObj, mustOne, mustBeMoreThanOne };
