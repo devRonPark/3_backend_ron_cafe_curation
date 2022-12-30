@@ -1,9 +1,8 @@
 const app = require('../app');
-// https, fs 모듈 추가
-// const https = require('https');
-// const fs = require('fs');
 const logger = require('../config/logger');
 const { debug } = require('console');
+const config = require('../config/config');
+const { initDB } = require('../config/mysql');
 
 /**
  * 현재 환경으로부터 port 가져와 Express에 저장
@@ -12,26 +11,25 @@ const port = normalizePort(process.env.PORT || '8000');
 app.set('port', port);
 
 /**
- * 인증파일 추가
- */
-// const options = {
-//   ca : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/fullchain.pem'),
-//   key : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/privkey.pem'),
-//   cert : fs.readFileSync('/etc/letsencrypt/live/backend.jjincafe-in-seoul.com/cert.pem')
-// }
-
-/**
- * HTTP server 생성
- */
-// const server = https.createServer(options, app);
-
-/**
  * 모든 네트워크 요청에 대해 제공된 port에서 Listen
  */
+async function listen(port) {
+  return new Promise(resolve => {
+    app.listen(port, () => {
+      logger.info(
+        `Server On... Express is running on http://localhost:${port}`,
+      );
+    });
+  });
+}
 
-app.listen(port, () => {
-  logger.info(`Server On... Express is running on http://localhost:${port}`);
-});
+async function f() {
+  // 서버와 DB 연결
+  await initDB(config.dbInfo);
+  await listen(port);
+}
+
+f();
 app.on('error', onError);
 app.on('listening', onListening);
 
@@ -68,11 +66,9 @@ function onError(error) {
     case 'EACCES':
       logger.error(bind + ' requires elevated privileges');
       process.exit(1);
-      break;
     case 'EADDRINUSE':
       logger.error(bind + ' is already in use');
       process.exit(1);
-      break;
     default:
       throw error;
   }
