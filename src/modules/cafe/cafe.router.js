@@ -35,16 +35,6 @@ cafeRouter.get(
   CafeController.getCafeDataBySearch,
 );
 
-// 공공 API에 요청을 보내 서울시 내 카페 데이터 받아오기
-// GET /api/cafes
-cafeRouter.get('/', CafeController.getDataFromPublicAPI);
-// id 값에 해당하는 카페 정보 불러오기
-// 공공 API로부터 받아온 데이터 가공하여 DB에 저장
-cafeRouter.post(
-  '/data-from-api',
-  CafeController.parseCafeDataRun,
-  CafeController.saveDataToDb,
-);
 // 카페 상세 정보 조회
 // GET /api/cafes/:cafeId
 cafeRouter.get(
