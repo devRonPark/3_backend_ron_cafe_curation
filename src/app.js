@@ -31,6 +31,15 @@ const app = express();
 global.logger || (global.logger = require('./config/logger'));
 const morganMiddleware = require('./config/morganMiddleware');
 const logger = require('./config/logger');
+const {
+  notFoundErrorHandler,
+  unauthorizedErrorHandler,
+  alreadyInUseErrorHandler,
+  validationErrorHandler,
+  clientErrorHandler,
+  internalServerErrorHandler,
+  productionErrorHandler,
+} = require('./common/middlewares/error');
 
 app.use(
   morganMiddleware,
@@ -66,101 +75,16 @@ app.use('/api/cafes', cafeRouter);
 app.use('/api/admin', adminRouter);
 
 // error handlers
-// select 로 조회 시 검색된 데이터가 없을 경우 NotFoundError 발생
-app.use(function handleNotFoundError(err, req, res, next) {
-  if (err instanceof NotFoundError) {
-    res.status(errorCode.NOT_FOUND).send({
-      httpStatus: errorCode.NOT_FOUND,
-      type: err.name,
-      message: err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
-app.use(function handleUnauthorizedError(err, req, res, next) {
-  if (err instanceof UnauthorizedError) {
-    res.status(errorCode.UNAUTHORIZED).send({
-      httpStatus: errorCode.UNAUTHORIZED,
-      type: err.name,
-      message: err.message,
-    });
-  }
-  next(err);
-});
-// select 로 조회 시 이미 해당 이름으로 등록된 데이터가 있을 경우 AlreadyInUseError 발생
-app.use(function handleAlreadyInUseError(err, req, res, next) {
-  if (err instanceof AlreadyInUseError) {
-    res.status(errorCode.CONFLICT).send({
-      httpStatus: errorCode.CONFLICT,
-      type: err.name,
-      message: err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
-// Client로부터 전달 받은 데이터(req.params, req.query, req.body)가 서버에서 정한 규칙에 위배될 경우 ValidationError 발생
-app.use(function handleValidationError(err, req, res, next) {
-  if (err instanceof ValidationError) {
-    res.status(errorCode.BAD_REQUEST).json({
-      httpStatus: errorCode.BAD_REQUEST,
-      type: err.name,
-      message: err.message,
-      validationErrors: err.validationErrors,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
-// Client Error 핸들링
-app.use(function handleClientError(err, req, res, next) {
-  if (err instanceof ClientError) {
-    res.status(errorCode.BAD_REQUEST).json({
-      httpStatus: errorCode.BAD_REQUEST,
-      type: err.name,
-      message: err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
-
-app.use(function handleInternalServerError(err, req, res, next) {
-  if (err instanceof MySqlError || err instanceof InternalServerError) {
-    res.status(errorCode.INTERNAL_SERVER_ERROR).json({
-      httpStatus: errorCode.INTERNAL_SERVER_ERROR,
-      type: err.name,
-      message: err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
-
-// production error handler
-// no stacktraces leaked to user
-app.use(function (err, req, res, next) {
-  if (res.headersSent) {
-    return next(err);
-  } else if (err.code === 'LIMIT_FILE_SIZE') {
-    // Multer error - see https://github.com/expressjs/multer/blob/master/lib/multer-error.js && https://github.com/expressjs/multer#error-handling
-    return res.status(errorCode.BAD_REQUEST).json({
-      httpStatus: errorCode.BAD_REQUEST,
-      message: err.code + ' ' + err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  } else {
-    res.status(err.status || errorCode.INTERNAL_SERVER_ERROR);
-    res.send({
-      httpStatus: errorCode.INTERNAL_SERVER_ERROR,
-      type: err.name,
-      message: err.message,
-      stack: app.get('env') === 'development' ? err.stack : {},
-    });
-  }
-  next(err);
-});
+app.use(
+  notFoundErrorHandler,
+  unauthorizedErrorHandler,
+  alreadyInUseErrorHandler,
+  validationErrorHandler,
+  clientErrorHandler,
+  internalServerErrorHandler,
+  internalServerErrorHandler,
+  productionErrorHandler,
+);
 // 에러 로깅 미들웨어
 app.use(function errorLogger(err, req, res, next) {
   if (req.file) {
