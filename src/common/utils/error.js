@@ -7,5 +7,10 @@ const errorObj = (statusCode, err) => {
     message: err.message,
   };
 };
+const mustOne = (arr, err) => {
+  if (!arr[0]) throw err;
 
-module.exports = { sendError, errorObj };
+  return arr[0];
+};
+
+module.exports = { sendError, errorObj, mustOne };
