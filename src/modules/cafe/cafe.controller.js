@@ -49,6 +49,18 @@ class CafeController {
     return res.status(successCode.OK).json(result);
   };
 
+  // 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
+  static getCafeInfoById = async (req, res, next) => {
+    const result = await CafeService.getCafeDetailById(req.params.cafeId);
+    logger.info('getCafeDetailById 결과 : ', result);
+    if (result === 404) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
+    else if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+
+    const resObj = CafeService.makeCafeDetailRes(result);
+    return res.status(successCode.OK).json(resObj);
+  };
+
   // 리뷰 등록
   static registerReview = async (req, res, next) => {
     // 이미 req 에 대한 유효성 검증은 끝남.
@@ -319,18 +331,6 @@ class CafeController {
     } catch (error) {
       throw new InternalServerError(error.message);
     }
-  };
-
-  // 요청 URL의 Parameter로 들어온 id 값을 기준으로 카페 정보 조회
-  static getCafeInfoById = async (req, res) => {
-    const reqObj = { ...req.params };
-    const { cafeId } = reqObj;
-
-    const result = await CafeService.getCafeDetailById(cafeId);
-    if (result === 404) next(new InternalServerError('Cafe Info Not Found'));
-
-    const resObj = CafeService.makeCafeDetailRes(result);
-    return res.status(successCode.OK).json(resObj);
   };
   // 카페 별 조회 수 조회
   static getCafeViewCount = async (req, res) => {
