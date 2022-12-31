@@ -129,6 +129,16 @@ class CafeController {
       connection.release();
     }
   };
+  // 카페 별 모든 리뷰 정보 조회
+  static getCafeReviewsByCafeId = async (req, res, next) => {
+    const result = await CafeService.getCafeReviewsById(
+      parseInt(req.params.cafeId, 10),
+    );
+    if (result === 404) next(new NotFoundError(errorMsgKor.NOT_FOUND));
+    else if (result === 500)
+      next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+    return res.status(successCode.OK).json(result);
+  };
   // 리뷰 삭제
   static deleteReview = async (req, res, next) => {
     const reqObj = { ...req.params };
@@ -159,37 +169,7 @@ class CafeController {
       connection.release();
     }
   };
-  // 카페 별 모든 리뷰 정보 조회
-  static getCafeReviewsByCafeId = async (req, res, next) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
-    let { cafeId } = reqObj;
-    // req.params 의 데이터는 string이므로 숫자로 변환해야 함
-    cafeId = parseInt(cafeId, 10);
-    const connection = await pool.getConnection();
 
-    try {
-      // inner join
-      const queryString =
-        'select r.id, r.user_id, r.ratings, r.comment, r.created_at, r.updated_at, u.name, u.profile_image_path from reviews as r join users as u on r.cafe_id = ? and r.deleted_at is null and r.user_id = u.id';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const reviewCount = result[0].length;
-      if (reviewCount < 1) {
-        // FIXME 200 OK { message: 'REVIEW_DATA_NOT_FOUND" }
-        resObj.message = 'CAFE_REVIEW_DATA_NOT_EXIST';
-      } else {
-        logger.info(`[CafeId: ${cafeId}] ${reviewCount} reviews exist`);
-        resObj.reviewCount = reviewCount;
-        resObj.reviews = result[0];
-      }
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (error) {
-      throw new InternalServerError(error.message);
-    }
-  };
   // 카페 별 평균 평점 조회
   static getCafeAverageRatings = async (req, res) => {
     const reqObj = { ...req.params };

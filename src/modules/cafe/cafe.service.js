@@ -59,6 +59,19 @@ class CafeService {
       return 500;
     }
   }
+  static async getCafeReviewsById(cafeId) {
+    try {
+      const queryResult = await select(
+        'select r.id, r.user_id, r.ratings, r.comment, r.created_at, r.updated_at, u.name, u.profile_image_path from reviews as r join users as u on r.cafe_id = ? and r.deleted_at is null and r.user_id = u.id',
+        [cafeId],
+      );
+      if (queryResult.length === 0) return 404;
+      return queryResult;
+    } catch (error) {
+      logger.error(error);
+      return 500;
+    }
+  }
   static makeCafeDetailRes(queryResult) {
     const resObj = { cafeData: {}, menuData: [] };
     for (const [key, value] of Object.entries(queryResult[0])) {
