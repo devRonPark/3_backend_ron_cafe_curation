@@ -292,31 +292,15 @@ class CafeController {
   };
 
   // 카페 별 조회 수 조회
-  static increaseCafeViewCount = async (req, res) => {
-    const reqObj = { ...req.params, ...req.body };
-    const resObj = {};
-
-    let { cafeId, views } = reqObj;
-    cafeId = parseInt(cafeId, 10);
-
-    // 조회 수 증가
-    const viewCount = views + 1;
-
-    try {
-      const queryString = 'update cafes set views = ? where id = ?';
-      const queryParams = [viewCount, cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await pool.conn().query(queryString, queryParams);
-      const isCafeViewCountUpdated = result[0].affectedRows > 0;
-
-      if (isCafeViewCountUpdated) {
-        resObj.viewCount = viewCount;
-        return res.status(successCode.OK).json(resObj);
-      }
-    } catch (err) {
-      logger.info(err.message);
-      throw new InternalServerError(err.message);
-    }
+  static increaseCafeViewCount = async (req, res, next) => {
+    const result = await CafeService.increaseViewCountById(
+      parseInt(req.params.cafeId, 10),
+      req.body.viewCount,
+    );
+    if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+    const resObj = { viewCount: result };
+    return res.status(successCode.OK).json(resObj);
   };
 }
 

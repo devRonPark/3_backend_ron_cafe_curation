@@ -1,8 +1,9 @@
 const { errorMsgKor } = require('../../common/constants');
 const MySqlError = require('../../common/errors/mysql.error');
 const { select, selectOne } = require('../../common/utils/queries');
+const { printSqlLog } = require('../../common/utils/util');
 const logger = require('../../config/logger');
-const pool = require('../../config/mysql');
+const { conn } = require('../../config/mysql');
 
 class CafeService {
   static async getCafeList(pageNumber, itemCount) {
@@ -117,6 +118,20 @@ class CafeService {
         cafeId,
       ]);
       return queryResult[0];
+    } catch (error) {
+      logger.error(error.message);
+      return 500;
+    }
+  }
+  static async increaseViewCountById(cafeId) {
+    try {
+      const getViewCountResult = await this.getViewCountById(cafeId);
+      const viewCount = getViewCountResult['views'];
+      const queryString = 'update cafes set views = ? where id = ?';
+      const queryParams = [viewCount + 1, cafeId];
+      printSqlLog(queryString, queryParams);
+      await conn().query(queryString, queryParams);
+      return viewCount + 1;
     } catch (error) {
       logger.error(error.message);
       return 500;
