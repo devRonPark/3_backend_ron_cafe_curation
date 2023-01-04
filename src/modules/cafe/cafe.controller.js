@@ -271,29 +271,14 @@ class CafeController {
   };
   // 카페 별 좋아요 수 조회
   static getCafeLikeCount = async (req, res, next) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
-    const { cafeId } = reqObj;
+    const result = await CafeService.getLikeCountById(
+      parseInt(req.params.cafeId, 10),
+    );
+    if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+    const resObj = { likeCount: result ?? 0 };
 
-    const connection = await pool.getConnection();
-    try {
-      const queryString =
-        'select count(0) from likes where cafe_id = ? and deleted_at is null';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.execute(queryString, queryParams);
-      const likeCount = result[0][0]['count(0)'];
-
-      if (likeCount < 1) {
-        resObj.message = 'CAFE_LIKE_COUNT_ZERO';
-      }
-      logger.info(`[CafeId: ${cafeId}] ${likeCount} likes exist`);
-      resObj.likeCount = likeCount;
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (error) {
-      throw new InternalServerError(error.message);
-    }
+    return res.status(successCode.OK).json(resObj);
   };
   // 카페 별 조회 수 조회
   static getCafeViewCount = async (req, res) => {

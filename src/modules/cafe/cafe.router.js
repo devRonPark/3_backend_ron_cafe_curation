@@ -65,7 +65,6 @@ cafeRouter.get(
 
 // 그 카페에 대한 리뷰 등록
 // POST /api/cafes/:cafeId/reviews
-// TODO Review 데이터 검증 필요(mood, light, price, taste, comment)
 // comment 는 글자 수 제한
 // mood,light, price, taste 는 1자리 수 실수인지 검사
 cafeRouter.post(
