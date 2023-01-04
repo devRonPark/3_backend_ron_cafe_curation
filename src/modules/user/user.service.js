@@ -4,7 +4,7 @@ const {
   changeOptionToWhereCond,
   printSqlLog,
   printCurrentTime,
-} = require('../../common/util');
+} = require('../../common/utils/util');
 
 class UserService {
   // option: {id: , name: }

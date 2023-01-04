@@ -3,7 +3,7 @@ const ValidationError = require('../errors/validation.error');
 const NotFoundError = require('../errors/not-found.error');
 const AlreadyInUseError = require('../errors/already-in-use.error');
 const pool = require('../../config/mysql');
-const { printSqlLog } = require('../util');
+const { printSqlLog } = require('../utils/util');
 const logger = require('../../config/logger');
 
 class ReviewValidate {

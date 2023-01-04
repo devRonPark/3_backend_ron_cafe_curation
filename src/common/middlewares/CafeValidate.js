@@ -2,11 +2,12 @@ const { check, param, query, validationResult } = require('express-validator');
 const ValidationError = require('../errors/validation.error');
 const NotFoundError = require('../errors/not-found.error');
 const AlreadyInUseError = require('../errors/already-in-use.error');
-const pool = require('../../config/mysql');
-const { guListInSeoul } = require('../constants');
-const { printSqlLog } = require('../util');
+const { conn } = require('../../config/mysql');
+const { guListInSeoul, errorMsgKor } = require('../constants');
+const { printSqlLog } = require('../utils/util');
 const logger = require('../../config/logger');
 const InternalServerError = require('../errors/internal-sever.error');
+const { select, selectOne, checkIfExists } = require('../utils/queries');
 
 class CafeInfoValidator {
   static validateCafeName = check('name')
@@ -45,22 +46,17 @@ class CafeInfoValidator {
     .isInt()
     .withMessage('Number type required');
   static isCafeInfoExistById = async (req, res, next) => {
-    const { cafeId } = req.params;
-
-    const connection = await pool.getConnection();
     try {
       // cafeId 에 해당하는 카페 정보 존재 여부 검증
-      const queryString = 'select count(0) from cafes where id = ?';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      if (result[0][0]['count(0)'] < 1)
-        next(new NotFoundError('Cafe info does not exist'));
-      logger.info('Cafe info exists');
-      connection.release();
+      const result = await checkIfExists(
+        'select count(0) from cafes where id = ?',
+        [req.params.cafeId],
+      );
+      if (!result) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
       next();
     } catch (err) {
-      throw new InternalServerError(err.message);
+      logger.error(err);
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
     }
   };
   // 사용자가 이미 좋아요를 눌렀는지 체크
@@ -258,7 +254,7 @@ class CafeInfoValidator {
       };
     });
     if (hasErrors)
-      next(new ValidationError('Validation Error', validationErrors));
+      return next(new ValidationError('Validation Error', validationErrors));
     next();
   };
 }

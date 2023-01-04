@@ -9,7 +9,7 @@ const pool = require('../../config/mysql');
 const ValidationError = require('../errors/validation.error');
 const NotFoundError = require('../errors/not-found.error');
 const AlreadyInUseError = require('../errors/already-in-use.error');
-const { printSqlLog } = require('../util');
+const { printSqlLog } = require('../utils/util');
 const logger = require('../../config/logger');
 
 class UserInfoValidator {

@@ -1,7 +1,7 @@
 const { successCode } = require('../../common/statusCodes/statusCode');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
-const { printSqlLog } = require('../../common/util');
+const { printSqlLog } = require('../../common/utils/util');
 const MySqlError = require('../../common/errors/mysql.error');
 const NotFoundError = require('../../common/errors/not-found.error');
 

@@ -27,3 +27,11 @@ exports.guListInSeoul = [
 ];
 
 exports.findUserOption = { id: 'id', name: 'name' };
+exports.errorMsgKor = {
+  BAD_REQUEST: '',
+  UNAUTHORIZED: '',
+  FORBIDDEN: '',
+  NOT_FOUND: '찾고자 하는 리소스가 존재하지 않습니다.',
+  CONFLICT: '',
+  INTERNAL_SERVER_ERROR: '서버 내부에서 발생하는 오류입니다.',
+};

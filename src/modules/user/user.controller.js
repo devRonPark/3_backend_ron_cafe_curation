@@ -7,7 +7,7 @@ const {
   printSqlLog,
   checkPasswordMatch,
   encryptPassword,
-} = require('../../common/util');
+} = require('../../common/utils/util');
 const { sendMailRun } = require('../../config/smtpTransporter');
 const logger = require('../../config/logger');
 const Auth = require('../auth/auth.service');
