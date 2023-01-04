@@ -134,9 +134,9 @@ class CafeController {
     const result = await CafeService.getCafeReviewsById(
       parseInt(req.params.cafeId, 10),
     );
-    if (result === 404) next(new NotFoundError(errorMsgKor.NOT_FOUND));
+    if (result === 404) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
     else if (result === 500)
-      next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
     return res.status(successCode.OK).json(result);
   };
   // 리뷰 삭제
@@ -171,30 +171,13 @@ class CafeController {
   };
 
   // 카페 별 평균 평점 조회
-  static getCafeAverageRatings = async (req, res) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
-    const { cafeId } = reqObj;
-
-    const connection = await pool.getConnection();
-    try {
-      const queryString =
-        'select avg(ratings) from reviews where cafe_id = ? and deleted_at is null';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.execute(queryString, queryParams);
-      console.log('result: ', result[0].length < 1);
-      if (result[0].length < 1) {
-        resObj.message = 'CAFE_RATINGS_NOT_EXIST';
-      } else {
-        const avgRatings = result[0][0]['avg(ratings)'];
-        resObj.avgRatings = avgRatings;
-      }
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (error) {
-      throw new InternalServerError(error.message);
-    }
+  static getCafeAverageRatings = async (req, res, next) => {
+    const result = await CafeService.getAverageRatingsById(
+      parseInt(req.params.cafeId, 10),
+    );
+    if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
+    return res.status(successCode.OK).json({ ratings: result ?? 0 });
   };
   // 카페 별 사용자 좋아요 조회
   static getCafeLike = async (req, res) => {
