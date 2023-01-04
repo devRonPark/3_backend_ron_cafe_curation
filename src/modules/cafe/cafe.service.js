@@ -111,5 +111,16 @@ class CafeService {
       return 500;
     }
   }
+  static async getViewCountById(cafeId) {
+    try {
+      const queryResult = await select('select views from cafes where id = ?', [
+        cafeId,
+      ]);
+      return queryResult[0];
+    } catch (error) {
+      logger.error(error.message);
+      return 500;
+    }
+  }
 }
 module.exports = CafeService;
