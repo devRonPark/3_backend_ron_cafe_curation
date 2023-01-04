@@ -98,5 +98,18 @@ class CafeService {
     }
     return resObj;
   }
+  static async getLikeCountById(cafeId) {
+    try {
+      const queryResult = await select(
+        'select count(0) from likes where cafe_id = ? and deleted_at is null',
+        [cafeId],
+      );
+      logger.info(queryResult);
+      return queryResult[0]['count(0)'];
+    } catch (error) {
+      logger.error(error.message);
+      return 500;
+    }
+  }
 }
 module.exports = CafeService;
