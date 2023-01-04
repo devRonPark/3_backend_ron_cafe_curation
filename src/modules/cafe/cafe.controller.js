@@ -134,7 +134,7 @@ class CafeController {
     const result = await CafeService.getCafeReviewsById(
       parseInt(req.params.cafeId, 10),
     );
-    if (result === 404) return next(new NotFoundError(errorMsgKor.NOT_FOUND));
+    if (result === 404) return res.status(successCode.OK).json({});
     else if (result === 500)
       return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
     return res.status(successCode.OK).json(result);
@@ -281,30 +281,14 @@ class CafeController {
     return res.status(successCode.OK).json(resObj);
   };
   // 카페 별 조회 수 조회
-  static getCafeViewCount = async (req, res) => {
-    const reqObj = { ...req.params };
-    const resObj = {};
+  static getCafeViewCount = async (req, res, next) => {
+    const result = await CafeService.getViewCountById(
+      parseInt(req.params.cafeId, 10),
+    );
+    if (result === 500)
+      return next(new InternalServerError(errorMsgKor.INTERNAL_SERVER_ERROR));
 
-    let { cafeId } = reqObj;
-    cafeId = parseInt(cafeId, 10);
-
-    const connection = await pool.getConnection();
-
-    try {
-      const queryString = 'select views from cafes where id = ?';
-      const queryParams = [cafeId];
-      printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
-      const cafeInfo = result[0][0];
-      console.log('cafeInfo: ', cafeInfo);
-
-      resObj.views = cafeInfo.views;
-      connection.release();
-      return res.status(successCode.OK).json(resObj);
-    } catch (err) {
-      logger.info(err.message);
-      throw new InternalServerError(err.message);
-    }
+    return res.status(successCode.OK).json(result);
   };
 
   // 카페 별 조회 수 조회
@@ -318,16 +302,13 @@ class CafeController {
     // 조회 수 증가
     const viewCount = views + 1;
 
-    const connection = await pool.getConnection();
-
     try {
       const queryString = 'update cafes set views = ? where id = ?';
       const queryParams = [viewCount, cafeId];
       printSqlLog(queryString, queryParams);
-      const result = await connection.query(queryString, queryParams);
+      const result = await pool.conn().query(queryString, queryParams);
       const isCafeViewCountUpdated = result[0].affectedRows > 0;
 
-      connection.release();
       if (isCafeViewCountUpdated) {
         resObj.viewCount = viewCount;
         return res.status(successCode.OK).json(resObj);
