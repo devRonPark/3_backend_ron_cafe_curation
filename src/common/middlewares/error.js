@@ -65,7 +65,6 @@ const devModeErrorHandler = (err, req, res, next) => {
 };
 
 const prodModeErrorHandler = (err, req, res, next) => {
-  let errorObj = {};
   if (res.headersSent) {
     return next(err);
   } else if (err.code === 'LIMIT_FILE_SIZE') {
