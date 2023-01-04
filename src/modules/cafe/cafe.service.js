@@ -1,5 +1,6 @@
+const { errorMsgKor } = require('../../common/constants');
 const MySqlError = require('../../common/errors/mysql.error');
-const { select } = require('../../common/utils/queries');
+const { select, selectOne } = require('../../common/utils/queries');
 const logger = require('../../config/logger');
 const pool = require('../../config/mysql');
 
@@ -49,7 +50,7 @@ class CafeService {
   static async getCafeDetailById(cafeId) {
     try {
       const queryResult = await select(
-        'select c.name, c.image_path, c.jibun_address, c.road_address, c.latitude, c.longitude, c.tel, c.created_at, m.name as menu_name, m.price from cafes as c inner join menus as m on c.id = m.cafe_id where c.id = ?',
+        'select c.name, c.image_path, c.jibun_address, c.road_address, c.latitude, c.longitude, c.tel, c.created_at, m.name as menu_name, m.price from cafes as c left join menus as m on c.id = m.cafe_id where c.id = ?',
         [cafeId],
       );
       if (queryResult.length === 0) return 404;
@@ -69,6 +70,19 @@ class CafeService {
       return queryResult;
     } catch (error) {
       logger.error(error);
+      return 500;
+    }
+  }
+  static async getAverageRatingsById(cafeId) {
+    try {
+      const queryResult = await select(
+        'select avg(ratings) from reviews where cafe_id = ? and deleted_at is null',
+        [cafeId],
+      );
+      logger.info(queryResult);
+      return queryResult[0]['avg(ratings)'];
+    } catch (error) {
+      logger.error(error.message);
       return 500;
     }
   }
